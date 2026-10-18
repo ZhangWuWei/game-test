@@ -10,3 +10,4 @@
 #item-note{margin-top:10px}
 @media(max-width:760px){.level-banner{font-size:13px;letter-spacing:.5px;white-space:normal;text-align:center;width:min(92%,420px)}}
 canvas{cursor:grab;touch-action:none}.arena{user-select:none;-webkit-user-select:none}body.pushing canvas{cursor:grabbing}
+.base-label{margin-top:14px}.health-bar.base i{background:#8aa6ff}.health-bar.base.low i:not(.empty){background:#f16d7f}

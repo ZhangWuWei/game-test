@@ -36,6 +36,8 @@
   const ALLY_SHIP_SCALE = 0.55;
   const MORTAR_INTERVAL = 3;
   const MORTAR_DMG = 3;
+  const BASE_MAX = 25;
+  const BASE_LINE = H - 100;
   const START_BOMBS = 10;
   const ONION_BOMBS = 5;
   const PLAYER_BOMB_DMG = 5;
@@ -89,6 +91,8 @@
   let itemClock = 0;
   let lightning = 0;
   let bombStock = START_BOMBS;
+  let baseHp = BASE_MAX;
+  let baseFlash = 0;
 
   try { best = Number(localStorage.getItem('starbound-best')) || 0; } catch {}
 
@@ -230,6 +234,9 @@
     $('items').textContent = `${collectedItems} / ${itemPlanNow.length}`;
     $('lightning').textContent = lightning > 0 ? `${lightning.toFixed(1)}s` : '—';
     $('bombs').textContent = String(bombStock);
+    $('base-hp').textContent = baseHp;
+    $('base-bar').innerHTML = Array.from({ length: BASE_MAX }, (_, i) => `<i class="${i < baseHp ? '' : 'empty'}"></i>`).join('');
+    $('base-bar').classList.toggle('low', baseHp <= 8);
   }
 
   function itemCounts(plan) {
@@ -432,6 +439,8 @@
     shipSelected = true;
     moveTarget = null;
     bombStock = START_BOMBS;
+    baseHp = BASE_MAX;
+    baseFlash = 0;
     player = { x: W / 2, y: H - 95, hp: 15 };
     beginWave();
   }
@@ -493,17 +502,48 @@
     tone(720, 0.35);
   }
 
-  function end() {
+  function end(reason) {
     mode = 'over';
     saveBest();
     keys.clear();
     gesture = null;
     shipSelected = false;
     moveTarget = null;
-    $('status').textContent = '任务结束';
+    $('status').textContent = reason === 'base' ? '基地失守' : '任务结束';
     $('pause').disabled = true;
-    showOverlay('EVERY END IS A NEW BEGINNING', '下一次，飞得更远。', `止步${LEVELS[levelIndex].name} · 得分 ${score} · 击毁 ${kills} · 存活 ${formatTime(elapsed)}`, '再次出击', '按 Enter 重新开始');
+    const title = reason === 'base' ? '基地失守了。' : '下一次，飞得更远。';
+    const text = reason === 'base'
+      ? `敌方闯进视野盲区，基地血量归零。止步${LEVELS[levelIndex].name} · 得分 ${score} · 击毁 ${kills}`
+      : `止步${LEVELS[levelIndex].name} · 得分 ${score} · 击毁 ${kills} · 存活 ${formatTime(elapsed)}`;
+    showOverlay('EVERY END IS A NEW BEGINNING', title, text, '再次出击', '按 Enter 重新开始');
     tone(120, 0.6, 'sawtooth', 0.045);
+  }
+
+  function baseLeakDamage(kind) {
+    if (kind === 'bigBoss') return 4;
+    if (kind === 'smallBoss') return 2;
+    return 1;
+  }
+
+  function hurtBase(e) {
+    if (!e || e.breached || e.dead || e.friendly || mode !== 'playing') return;
+    e.breached = true;
+    const amount = baseLeakDamage(e.kind);
+    baseHp = Math.max(0, baseHp - amount);
+    baseFlash = 0.45;
+    boom(e.x, Math.min(e.y, H - 30), amount >= 4 ? '#ff5a78' : amount >= 2 ? '#ffb15a' : '#8eb6ff', amount >= 2 ? 1.3 : 0.8);
+    if (amount >= 2) sfxExplosion(amount >= 4);
+    else sfxImpact();
+    syncHUD();
+    if (baseHp <= 0) end('base');
+  }
+
+  function watchBase() {
+    if (mode !== 'playing') return;
+    for (const e of enemies) {
+      if (e.dead || e.friendly || e.breached) continue;
+      if (e.y >= BASE_LINE) hurtBase(e);
+    }
   }
 
   function damage(amount) {
@@ -640,6 +680,10 @@
     e.x += (tx - e.x) * Math.min(1, dt * (e.kind === 'ground' ? 0.85 : 1.15));
     e.y += (ty - e.y) * Math.min(1, dt * (e.kind === 'ground' ? 0.85 : 1.15));
     e.x = Math.max(36, Math.min(W - 36, e.x));
+    if (!e.friendly && e.kind !== 'plane' && e.y < BASE_LINE - 6) {
+      const sink = e.kind === 'bigBoss' ? 22 : e.kind === 'smallBoss' ? 26 : e.kind === 'baozi' ? 18 : 14;
+      e.y += sink * dt;
+    }
   }
 
   function spawnItem(type) {
@@ -858,6 +902,7 @@
   function update(dt) {
     elapsed += dt;
     hitFlash = Math.max(0, hitFlash - dt);
+    baseFlash = Math.max(0, baseFlash - dt);
     shake = Math.max(0, shake - dt * 36);
     if (bannerTimer > 0) {
       bannerTimer -= dt;
@@ -1011,6 +1056,8 @@
         }
       }
     }
+
+    watchBase();
 
     if (mode === 'playing') {
       for (const e of enemies) {
@@ -1317,6 +1364,19 @@
     ctx.beginPath();
     ctx.arc(685, 160, 81, 0, Math.PI * 2);
     ctx.fill();
+
+    ctx.fillStyle = baseFlash > 0 ? 'rgba(255,72,96,0.16)' : 'rgba(90,140,220,0.10)';
+    ctx.fillRect(0, BASE_LINE, W, H - BASE_LINE);
+    ctx.strokeStyle = baseFlash > 0 ? '#ff8aa0' : '#7eafff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, BASE_LINE);
+    ctx.lineTo(W, BASE_LINE);
+    ctx.stroke();
+    ctx.font = '13px "Noto Sans SC", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = baseFlash > 0 ? '#ffd0d8' : '#b7d4ff';
+    ctx.fillText('视野盲区', 18, BASE_LINE + 22);
 
     if (mode === 'ready') {
       ship(W / 2, H - 100, PAL.player, 0, 1.1, false);
