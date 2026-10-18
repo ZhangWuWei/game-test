@@ -1770,7 +1770,7 @@
     ctx.restore();
   }
 
-  const FP_HORIZON = 248;
+  const FP_HORIZON = 372;
 
   function viewButtonRect() {
     const w = 96;
@@ -1871,8 +1871,9 @@
   function drawFirstPerson(dt) {
     const sky = ctx.createLinearGradient(0, 0, 0, H);
     sky.addColorStop(0, '#02040e');
-    sky.addColorStop(0.38, '#16325c');
-    sky.addColorStop(0.62, '#0c1c34');
+    sky.addColorStop(0.42, '#0a1830');
+    sky.addColorStop(0.62, '#16325c');
+    sky.addColorStop(0.78, '#0c1c34');
     sky.addColorStop(1, '#070d16');
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, W, H);
@@ -1962,7 +1963,7 @@
     for (const m of marks) m.draw();
 
     ctx.save();
-    ctx.translate(W / 2, H + 18);
+    ctx.translate(W / 2, H + 46);
     if (flame > 0) {
       ctx.save();
       ctx.translate(0, -78);
@@ -1982,7 +1983,7 @@
       ctx.restore();
     }
     ctx.restore();
-    ship(W / 2, H + 30, PAL.player, hitFlash, 2.15, false, 0);
+    ship(W / 2, H + 58, PAL.player, hitFlash, 2.15, false, 0);
 
     ctx.save();
     ctx.font = '14px "Noto Sans SC", sans-serif';
