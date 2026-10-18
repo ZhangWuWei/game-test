@@ -40,8 +40,8 @@
   const ALLY_SHIP_SCALE = 0.55;
   const MORTAR_INTERVAL = 3;
   const MORTAR_DMG = 3;
-  const PLAYER_MAX = 16;
-  const BASE_MAX = 10;
+  const PLAYER_MAX = 26;
+  const BASE_MAX = 20;
   const BASE_LINE = H - 100;
   const START_BOMBS = 50;
   const ONION_BOMBS = 5;
@@ -243,7 +243,7 @@
     $('aurora').textContent = String(auroraStock);
     $('base-hp').textContent = baseHp;
     $('base-bar').innerHTML = Array.from({ length: BASE_MAX }, (_, i) => `<i class="${i < baseHp ? '' : 'empty'}"></i>`).join('');
-    $('base-bar').classList.toggle('low', baseHp <= 3);
+    $('base-bar').classList.toggle('low', baseHp <= 6);
   }
 
   function itemCounts(plan) {
