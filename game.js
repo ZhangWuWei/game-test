@@ -37,9 +37,14 @@
   const HEAL_AMOUNT = 4;
   const ALLY_SHIP_COUNT = 3;
   const ALLY_GROUND_COUNT = 2;
+  const ALLY_AA_COUNT = 1;
+  const ENEMY_AA_COUNT = 1;
   const ALLY_SHIP_SCALE = 0.55;
   const MORTAR_INTERVAL = 3;
   const MORTAR_DMG = 3;
+  const AA_DMG = 4;
+  const AA_INTERVAL = 2;
+  const AA_HP = 4;
   const PLAYER_MAX = 26;
   const BASE_MAX = 19;
   const BASE_LINE = H - 100;
@@ -258,7 +263,7 @@
     const bg = BOSS.big;
     $('intel-note').textContent = `普通飞机为红色，3 点生命，每 2 秒发射激光，命中扣 1 血。地面炮台与飞机同时出现。小包子是蓝黄色飞机，每 ${bz.shot} 秒 ${bz.shotCount} 发，每发扣 ${bz.shotDmg} 血，每 ${bz.bomb} 秒 1 颗炸弹扣 ${bz.bombDmg} 血。小Boss 为橙色较小飞机，每 ${sm.shot} 秒 ${sm.shotCount} 发，每发扣 ${sm.shotDmg} 血，炸弹扣 ${sm.bombDmg} 血。大Boss 是红色、体积更大的飞机，每 ${bg.shot} 秒 ${bg.shotCount} 发，每发扣 ${bg.shotDmg} 血，炸弹扣 ${bg.bombDmg} 血。`;
     $('level-list').innerHTML = LEVELS.map(lv => `<li>${describeLevel(lv)}</li>`).join('');
-    $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、绿 ${normal.green}、红 ${normal.red}、洋葱 ${normal.onion}、粉 ${normal.pink}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、绿 ${final.green}、红 ${final.red}、洋葱 ${final.onion}、粉 ${final.pink}。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架小型黄色飞机，以及 ${ALLY_GROUND_COUNT} 支我方地面部队；地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。洋葱球：再获得 ${ONION_BOMBS} 颗自己投出的炸弹。开局 ${START_BOMBS} 颗追踪炸弹，鼠标左键点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。中子弹每关 ${AURORA_COUNT} 发，鼠标右键射出一小条追踪极光，打中扣 ${AURORA_DMG} 血。粉色小球：极光再加 ${PINK_AURORA} 发。`;
+    $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、绿 ${normal.green}、红 ${normal.red}、洋葱 ${normal.onion}、粉 ${normal.pink}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、绿 ${final.green}、红 ${final.red}、洋葱 ${final.onion}、粉 ${final.pink}。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架小型黄色飞机、${ALLY_GROUND_COUNT} 支我方地面部队，再加 ${ALLY_AA_COUNT} 座我方基地防空炮。防空炮弹打中飞机或坦克扣 ${AA_DMG} 血。地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。每关敌方也有 ${ENEMY_AA_COUNT} 座防空炮，炮弹打中同样扣 ${AA_DMG} 血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。洋葱球：再获得 ${ONION_BOMBS} 颗自己投出的炸弹。开局 ${START_BOMBS} 颗追踪炸弹，鼠标左键点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。中子弹每关 ${AURORA_COUNT} 发，鼠标右键射出一小条追踪极光，打中扣 ${AURORA_DMG} 血。粉色小球：极光再加 ${PINK_AURORA} 发。`;
   }
 
   function roster(lv) {
@@ -271,11 +276,11 @@
   }
 
   function describeLevel(lv) {
-    return `<b>${lv.name}</b>：${roster(lv)}，同时有地面炮台 ${lv.ground}。`;
+    return `<b>${lv.name}</b>：${roster(lv)}，同时有地面炮台 ${lv.ground}，敌方防空炮台 ${ENEMY_AA_COUNT}。`;
   }
 
   function nextBlurb(lv) {
-    return `${lv.name}：${roster(lv)}，同时有地面炮台 ${lv.ground}`;
+    return `${lv.name}：${roster(lv)}，地面炮台 ${lv.ground}，敌方防空炮台 ${ENEMY_AA_COUNT}`;
   }
 
   function bannerText(lv) {
@@ -368,6 +373,12 @@
     enemies.push(makeCraft('ground', homeX, -60, { homeX, homeY, phase: index * 1.3 }));
   }
 
+  function spawnEnemyAa(index) {
+    const homeX = ENEMY_AA_COUNT === 1 ? 400 : 180 + index * ((W - 360) / (ENEMY_AA_COUNT - 1));
+    const homeY = 292;
+    enemies.push(makeCraft('aa', homeX, -90, { homeX, homeY, phase: 0.6 + index, hp: AA_HP, maxHp: AA_HP }));
+  }
+
   function spawnNamed(count, kind, y, homeY, loneX) {
     for (let i = 0; i < count; i++) {
       const homeX = count === 1 ? loneX : 150 + i * ((W - 300) / (count - 1));
@@ -420,6 +431,7 @@
       spawnGround(i, lv.ground);
       spawnedGround++;
     }
+    for (let i = 0; i < ENEMY_AA_COUNT; i++) spawnEnemyAa(i);
     if (lv.baozi) spawnNamed(lv.baozi, 'baozi', -70, 132, W / 2);
     if (lv.small) spawnNamed(lv.small, 'smallBoss', -90, 168, lv.big ? 230 : W / 2);
     if (lv.big) spawnNamed(lv.big, 'bigBoss', -120, 118, lv.small ? 560 : W / 2);
@@ -569,7 +581,7 @@
     if (e.dead) return;
     e.dead = true;
     e.hp = 0;
-    const points = { plane: 100, ground: 80, baozi: 600, smallBoss: 2000, bigBoss: 4000 };
+    const points = { plane: 100, ground: 80, aa: 140, baozi: 600, smallBoss: 2000, bigBoss: 4000 };
     score += points[e.kind] || 100;
     kills++;
     if (e.kind === 'plane') killedPlanes++;
@@ -577,7 +589,7 @@
     if (e.kind === 'baozi') baoziKilled++;
     if (e.kind === 'smallBoss') smallBossKilled++;
     if (e.kind === 'bigBoss') bigBossKilled++;
-    const color = e.kind === 'ground' ? '#d6c36a' : e.kind === 'baozi' ? '#ffd15c' : '#ff6d88';
+    const color = e.kind === 'ground' ? '#d6c36a' : e.kind === 'aa' ? '#ffb15a' : e.kind === 'baozi' ? '#ffd15c' : '#ff6d88';
     const scale = e.kind === 'bigBoss' ? 2.3 : e.kind === 'smallBoss' || e.kind === 'baozi' ? 1.7 : 1.2;
     boom(e.x, e.y, color, scale);
     sfxExplosion(e.kind === 'bigBoss' || e.kind === 'smallBoss');
@@ -608,6 +620,15 @@
 
   function weapons(e, dt) {
     if (e.dead || e.y < 8) return;
+    if (e.kind === 'aa') {
+      e.timer += dt;
+      if (e.timer >= AA_INTERVAL) {
+        e.timer -= AA_INTERVAL;
+        const target = nearestAlly(e) || player;
+        fireAa(e, target, true);
+      }
+      return;
+    }
     if (e.kind === 'plane' || e.kind === 'ground') {
       e.timer += dt;
       const interval = e.kind === 'ground' ? 2.4 : 2;
@@ -636,7 +657,7 @@
   }
 
   function hitRadius(e) {
-    if (e.kind === 'ground') return { x: 30, y: 24 };
+    if (e.kind === 'ground' || e.kind === 'aa') return { x: 30, y: 24 };
     const s = e.scale || 1;
     return { x: 22 * s, y: 22 * s };
   }
@@ -677,6 +698,19 @@
       e.x += dx / dist * step;
       e.y += dy / dist * step;
       e.x = Math.max(36, Math.min(W - 36, e.x));
+      return;
+    }
+    if (e.kind === 'aa') {
+      const tx = e.homeX + Math.sin(elapsed * 0.55 + e.phase) * (e.friendly ? 16 : 28);
+      const dx = tx - e.x;
+      const dy = e.homeY - e.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const step = Math.min(dist, 80 * dt);
+      e.x += dx / dist * step;
+      e.y += dy / dist * step;
+      e.x = Math.max(36, Math.min(W - 36, e.x));
+      if (e.friendly) e.y = Math.max(BASE_LINE + 8, Math.min(H - 24, e.y));
+      else if (e.y < BASE_LINE - 6) e.y += 14 * dt;
       return;
     }
     const tx = e.homeX + Math.sin(elapsed * (e.kind === 'bigBoss' ? 0.7 : 0.9) + e.phase) * (e.kind === 'bigBoss' ? 120 : 70);
@@ -746,6 +780,54 @@
     }
   }
 
+  function nearestAlly(from) {
+    let best = null;
+    let bestD = Infinity;
+    const pool = player ? [{ x: player.x, y: player.y, dead: false }] : [];
+    for (const a of allies) if (!a.dead) pool.push(a);
+    for (const unit of pool) {
+      const d = (unit.x - from.x) ** 2 + (unit.y - from.y) ** 2;
+      if (d < bestD) { best = unit; bestD = d; }
+    }
+    return best;
+  }
+
+  function fireAa(from, target, enemy) {
+    if (!target) return;
+    const angle = Math.atan2(target.y - from.y, target.x - from.x);
+    const speed = 460;
+    lasers.push({
+      x: from.x + Math.cos(angle) * 20,
+      y: from.y + Math.sin(angle) * 20,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      enemy,
+      friendly: !enemy,
+      dmg: AA_DMG,
+      aa: true,
+      dead: false,
+    });
+    sfxWhoosh();
+    muzzleFlash(from.x, from.y, enemy ? '#ffb15a' : '#d7ecff');
+  }
+
+  function summonAaTurrets(count) {
+    const start = allies.filter(a => a.kind === 'aa' && !a.dead).length;
+    for (let i = 0; i < count; i++) {
+      const n = start + i;
+      const x = 150 + (n % 4) * 160;
+      const y = BASE_LINE + 38;
+      allies.push(makeCraft('aa', x, H + 36, {
+        homeX: x,
+        homeY: y,
+        friendly: true,
+        timer: 0.3,
+        hp: AA_HP,
+        maxHp: AA_HP,
+      }));
+    }
+  }
+
   function summonGroundTroops(count) {
     const start = allies.filter(a => a.friendly && a.kind === 'ground' && !a.dead).length;
     for (let i = 0; i < count; i++) {
@@ -806,6 +888,7 @@
     } else if (it.type === 'yellow') {
       summonShips(ALLY_SHIP_COUNT);
       summonGroundTroops(ALLY_GROUND_COUNT);
+      summonAaTurrets(ALLY_AA_COUNT);
       burst(it.x, it.y, '#ffd15c', 18);
       tone(640, 0.18);
     } else if (it.type === 'green') {
@@ -890,6 +973,14 @@
   function allyWeapons(a, dt) {
     const target = nearestEnemy(a);
     if (!target || a.y < 8) return;
+    if (a.kind === 'aa') {
+      a.timer += dt;
+      if (a.timer >= AA_INTERVAL) {
+        a.timer -= AA_INTERVAL;
+        fireAa(a, target, false);
+      }
+      return;
+    }
     if (a.kind === 'ground') {
       a.timer += dt;
       if (a.timer >= MORTAR_INTERVAL) {
@@ -1110,6 +1201,9 @@
             if (b.bomb) {
               boom(b.x, b.y, hitColor, 1.5);
               sfxExplosion(false);
+            } else if (b.aa) {
+              boom(b.x, b.y, '#9ad7ff', 0.9);
+              sfxImpact();
             } else if (b.aurora) {
               boom(b.x, b.y, '#7dffc4', 1.05);
               burst(b.x, b.y, '#b388ff', 10);
@@ -1241,7 +1335,7 @@
     const y = e.y - 30 * (e.scale || 1) - 8;
     ctx.fillStyle = '#241821';
     ctx.fillRect(e.x - w / 2, y, w, 4);
-    ctx.fillStyle = e.kind === 'baozi' ? '#ffd15c' : e.kind === 'smallBoss' ? '#ff8a4a' : '#ff4d6d';
+    ctx.fillStyle = e.friendly ? '#7ec8ff' : e.kind === 'baozi' ? '#ffd15c' : e.kind === 'aa' ? '#ffb15a' : e.kind === 'smallBoss' ? '#ff8a4a' : '#ff4d6d';
     ctx.fillRect(e.x - w / 2, y, w * Math.max(0, e.hp) / e.maxHp, 4);
   }
 
@@ -1283,9 +1377,42 @@
     ctx.restore();
   }
 
+  function drawAa(e, friendly) {
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    const target = friendly ? nearestEnemy(e) : nearestAlly(e);
+    const aim = target ? Math.atan2(target.y - e.y, target.x - e.x) : (friendly ? -Math.PI / 2 : Math.PI / 2);
+    const flash = e.flash > 0;
+    ctx.fillStyle = 'rgba(0,0,0,.35)';
+    ctx.beginPath();
+    ctx.ellipse(0, 16, 22, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = flash ? '#fff' : friendly ? '#143e74' : '#642833';
+    ctx.strokeStyle = friendly ? '#b7e4ff' : '#ffc1c8';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(-20, 10);
+    ctx.lineTo(-13, -8);
+    ctx.lineTo(13, -8);
+    ctx.lineTo(20, 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.save();
+    ctx.rotate(aim);
+    ctx.fillStyle = flash ? '#fff' : friendly ? '#e7f4ff' : '#ffd7b0';
+    ctx.fillRect(6, -3.2, 28, 6.4);
+    ctx.fillStyle = friendly ? '#7ec8ff' : '#ff5d6e';
+    ctx.beginPath();
+    ctx.arc(0, 0, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    ctx.restore();
+  }
+
   function drawAllyTag(a) {
     if (a.kind === 'wing') return;
-    const text = a.kind === 'ground' ? '我方地面' : a.kind === 'smallBoss' ? '我方小Boss' : a.kind === 'bigBoss' ? '我方大Boss' : '我方';
+    const text = a.kind === 'aa' ? '我方防空' : a.kind === 'ground' ? '我方地面' : a.kind === 'smallBoss' ? '我方小Boss' : a.kind === 'bigBoss' ? '我方大Boss' : '我方';
     ctx.save();
     ctx.font = '12px "Noto Sans SC", sans-serif';
     ctx.textAlign = 'center';
@@ -1296,12 +1423,12 @@
   }
 
   function drawTag(e) {
-    const text = { ground: '地面', baozi: '小包子', smallBoss: '小Boss', bigBoss: '大Boss' }[e.kind];
+    const text = { ground: '地面', aa: '防空', baozi: '小包子', smallBoss: '小Boss', bigBoss: '大Boss' }[e.kind];
     if (!text) return;
     ctx.save();
     ctx.font = '12px "Noto Sans SC", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillStyle = e.kind === 'baozi' ? '#ffe38a' : e.kind === 'ground' ? '#e6d48a' : '#ffd0d6';
+    ctx.fillStyle = e.kind === 'baozi' ? '#ffe38a' : e.kind === 'aa' ? '#ffd0a4' : e.kind === 'ground' ? '#e6d48a' : '#ffd0d6';
     const y = e.y - (e.maxHp > 3 ? 30 * (e.scale || 1) + 18 : 44);
     ctx.fillText(text, e.x, y);
     ctx.restore();
@@ -1491,6 +1618,27 @@
       ctx.restore();
       return;
     }
+    if (b.aa) {
+      const ang = Math.atan2(b.vy, b.vx);
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(ang);
+      ctx.shadowColor = b.enemy ? '#ff5a3c' : '#3d7dff';
+      ctx.shadowBlur = 12;
+      ctx.fillStyle = b.enemy ? '#ffb15a' : '#f4fbff';
+      ctx.strokeStyle = b.enemy ? '#ff5a3c' : '#3d7dff';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.ellipse(-1, 0, 10, 3.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = b.enemy ? '#fff3c4' : '#ffffff';
+      ctx.beginPath();
+      ctx.arc(7, 0, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      return;
+    }
     if (b.mortar) {
       ctx.save();
       ctx.shadowColor = '#9ad7ff';
@@ -1605,6 +1753,7 @@
           ctx.restore();
         }
         if (e.kind === 'ground') drawGround(e);
+        else if (e.kind === 'aa') drawAa(e, false);
         else if (e.kind === 'baozi') ship(e.x, e.y, PAL.baozi, e.flash, e.scale, true);
         else if (e.kind === 'smallBoss') ship(e.x, e.y, PAL.small, e.flash, e.scale, true);
         else ship(e.x, e.y, PAL.red, e.flash, e.scale || 1, true);
@@ -1623,6 +1772,7 @@
           ctx.restore();
         }
         if (a.kind === 'ground') drawGround(a, true);
+        else if (a.kind === 'aa') drawAa(a, true);
         else if (a.kind === 'smallBoss') ship(a.x, a.y, PAL.player, a.flash, a.scale, false);
         else if (a.kind === 'bigBoss') ship(a.x, a.y, PAL.player, a.flash, a.scale, false);
         else if (a.kind === 'wing') ship(a.x, a.y, PAL.yellowShip, a.flash, a.scale || ALLY_SHIP_SCALE, false);
