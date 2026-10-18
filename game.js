@@ -48,6 +48,9 @@
   const AA_DMG = 4;
   const AA_INTERVAL = 2;
   const AA_HP = 4;
+  const HELI_HP = 3;
+  const HELI_DMG = 2;
+  const HELI_INTERVAL = 2;
   const PLAYER_MAX = 26;
   const BASE_MAX = 19;
   const BASE_LINE = H - 100;
@@ -269,7 +272,7 @@
     const bz = BOSS.baozi;
     const sm = BOSS.small;
     const bg = BOSS.big;
-    $('intel-note').textContent = `普通飞机为红色，3 点生命，每 2 秒发射激光，命中扣 1 血。地面炮台与飞机同时出现。小包子是蓝黄色飞机，每 ${bz.shot} 秒 ${bz.shotCount} 发，每发扣 ${bz.shotDmg} 血，每 ${bz.bomb} 秒 1 颗炸弹扣 ${bz.bombDmg} 血。小Boss 为橙色较小飞机，每 ${sm.shot} 秒 ${sm.shotCount} 发，每发扣 ${sm.shotDmg} 血，炸弹扣 ${sm.bombDmg} 血。大Boss 是红色、体积更大的飞机，每 ${bg.shot} 秒 ${bg.shotCount} 发，每发扣 ${bg.shotDmg} 血，炸弹扣 ${bg.bombDmg} 血。`;
+    $('intel-note').textContent = `普通飞机为红色，3 点生命，每 2 秒发射激光，命中扣 1 血。每关敌我各有 1 架直升机，${HELI_HP} 滴血，会发射普通子弹，打中扣 ${HELI_DMG} 血。直升机不计入过关数量。地面炮台与飞机同时出现。小包子是蓝黄色飞机，每 ${bz.shot} 秒 ${bz.shotCount} 发，每发扣 ${bz.shotDmg} 血，每 ${bz.bomb} 秒 1 颗炸弹扣 ${bz.bombDmg} 血。小Boss 为橙色较小飞机，每 ${sm.shot} 秒 ${sm.shotCount} 发，每发扣 ${sm.shotDmg} 血，炸弹扣 ${sm.bombDmg} 血。大Boss 是红色、体积更大的飞机，每 ${bg.shot} 秒 ${bg.shotCount} 发，每发扣 ${bg.shotDmg} 血，炸弹扣 ${bg.bombDmg} 血。`;
     $('level-list').innerHTML = LEVELS.map(lv => `<li>${describeLevel(lv)}</li>`).join('');
     $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、白 ${normal.white}、绿 ${normal.green}、红 ${normal.red}、黑 ${normal.black}、洋葱 ${normal.onion}、粉 ${normal.pink}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、白 ${final.white}、绿 ${final.green}、红 ${final.red}、黑 ${final.black}、洋葱 ${final.onion}、粉 ${final.pink}。黑球是第 6 个出现的，自己点击或主角碰到后基地回复 ${BASE_HEAL} 滴血。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架小型黄色飞机、${ALLY_GROUND_COUNT} 支我方地面部队，再加 ${ALLY_AA_COUNT} 座我方基地防空炮。防空炮弹打中飞机或坦克扣 ${AA_DMG} 血。地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。每关敌方也有 ${ENEMY_AA_COUNT} 座防空炮，炮台有 ${AA_HP} 滴血，炮弹打中同样扣 ${AA_DMG} 血。我方防空炮同样是 ${AA_HP} 滴血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。洋葱球：再获得 ${ONION_BOMBS} 颗自己投出的炸弹。开局 ${START_BOMBS} 颗追踪炸弹，鼠标左键点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。中子弹每关 ${AURORA_COUNT} 发，鼠标右键射出一小条追踪极光，打中扣 ${AURORA_DMG} 血。粉色小球：极光再加 ${PINK_AURORA} 发。白球：主角碰到后喷出火焰 ${FLAME_TIME} 秒，烧到的敌人扣 ${FLAME_DMG} 血，时间一到火焰消失。`;
   }
@@ -284,11 +287,11 @@
   }
 
   function describeLevel(lv) {
-    return `<b>${lv.name}</b>：${roster(lv)}，同时有地面炮台 ${lv.ground}，敌方防空炮台 ${ENEMY_AA_COUNT}。`;
+    return `<b>${lv.name}</b>：${roster(lv)}，同时有地面炮台 ${lv.ground}，敌方防空炮台 ${ENEMY_AA_COUNT}，敌我直升机各 1。`;
   }
 
   function nextBlurb(lv) {
-    return `${lv.name}：${roster(lv)}，地面炮台 ${lv.ground}，敌方防空炮台 ${ENEMY_AA_COUNT}`;
+    return `${lv.name}：${roster(lv)}，地面炮台 ${lv.ground}，敌方防空炮台 ${ENEMY_AA_COUNT}，敌我直升机各 1`;
   }
 
   function bannerText(lv) {
@@ -381,6 +384,25 @@
     enemies.push(makeCraft('ground', homeX, -60, { homeX, homeY, phase: index * 1.3 }));
   }
 
+  function spawnHelicopters() {
+    enemies.push(makeCraft('heli', 640, -80, {
+      homeX: 640,
+      homeY: 148,
+      phase: 0.4,
+      hp: HELI_HP,
+      maxHp: HELI_HP,
+    }));
+    allies.push(makeCraft('heli', 160, H + 30, {
+      homeX: 160,
+      homeY: 430,
+      phase: 1.2,
+      friendly: true,
+      timer: 0.8,
+      hp: HELI_HP,
+      maxHp: HELI_HP,
+    }));
+  }
+
   function spawnEnemyAa(index) {
     const homeX = ENEMY_AA_COUNT === 1 ? 400 : 180 + index * ((W - 360) / (ENEMY_AA_COUNT - 1));
     const homeY = 292;
@@ -441,6 +463,7 @@
       spawnedGround++;
     }
     for (let i = 0; i < ENEMY_AA_COUNT; i++) spawnEnemyAa(i);
+    spawnHelicopters();
     if (lv.baozi) spawnNamed(lv.baozi, 'baozi', -70, 132, W / 2);
     if (lv.small) spawnNamed(lv.small, 'smallBoss', -90, 168, lv.big ? 230 : W / 2);
     if (lv.big) spawnNamed(lv.big, 'bigBoss', -120, 118, lv.small ? 560 : W / 2);
@@ -591,7 +614,7 @@
     if (e.dead) return;
     e.dead = true;
     e.hp = 0;
-    const points = { plane: 100, ground: 80, aa: 140, baozi: 600, smallBoss: 2000, bigBoss: 4000 };
+    const points = { plane: 100, ground: 80, aa: 140, heli: 120, baozi: 600, smallBoss: 2000, bigBoss: 4000 };
     score += points[e.kind] || 100;
     kills++;
     if (e.kind === 'plane') killedPlanes++;
@@ -636,6 +659,14 @@
         e.timer -= AA_INTERVAL;
         const target = nearestAlly(e) || player;
         fireAa(e, target, true);
+      }
+      return;
+    }
+    if (e.kind === 'heli') {
+      e.timer += dt;
+      if (e.timer >= HELI_INTERVAL) {
+        e.timer -= HELI_INTERVAL;
+        fire(e, HELI_DMG, 240, 0, false);
       }
       return;
     }
@@ -708,6 +739,16 @@
       e.x += dx / dist * step;
       e.y += dy / dist * step;
       e.x = Math.max(36, Math.min(W - 36, e.x));
+      return;
+    }
+    if (e.kind === 'heli') {
+      const tx = e.homeX + Math.sin(elapsed * 0.7 + e.phase) * 70;
+      const ty = e.homeY + Math.cos(elapsed * 0.45 + e.phase) * 22;
+      e.x += (tx - e.x) * Math.min(1, dt * 1.1);
+      e.y += (ty - e.y) * Math.min(1, dt * 1.1);
+      e.x = Math.max(36, Math.min(W - 36, e.x));
+      if (e.friendly) e.y = Math.max(80, Math.min(BASE_LINE - 28, e.y));
+      else e.y = Math.max(48, Math.min(BASE_LINE - 80, e.y));
       return;
     }
     if (e.kind === 'aa') {
@@ -1039,6 +1080,14 @@
       if (a.timer >= MORTAR_INTERVAL) {
         a.timer -= MORTAR_INTERVAL;
         fireMortar(a, target);
+      }
+      return;
+    }
+    if (a.kind === 'heli') {
+      a.timer += dt;
+      if (a.timer >= HELI_INTERVAL) {
+        a.timer -= HELI_INTERVAL;
+        fireFriendly(a, target, HELI_DMG, 240, 0, false);
       }
       return;
     }
@@ -1481,9 +1530,71 @@
     ctx.restore();
   }
 
+  function drawHeli(e, friendly) {
+    const flash = e.flash > 0;
+    const body = flash ? '#ffffff' : friendly ? '#166dd4' : '#a92c4b';
+    const edge = friendly ? '#7bcaff' : '#ff8ca0';
+    const glass = friendly ? '#b8efff' : '#ffccd4';
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    ctx.fillStyle = 'rgba(0,0,0,.35)';
+    ctx.beginPath();
+    ctx.ellipse(0, 16, 20, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-2, 3);
+    ctx.lineTo(-24, 9);
+    ctx.stroke();
+    ctx.save();
+    ctx.translate(-24, 9);
+    ctx.rotate(elapsed * 22);
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(0, -7);
+    ctx.lineTo(0, 7);
+    ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = body;
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.ellipse(3, 2, 16, 9, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = glass;
+    ctx.beginPath();
+    ctx.ellipse(9, 0, 7, 4.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(-6, 10);
+    ctx.lineTo(-6, 14);
+    ctx.lineTo(14, 14);
+    ctx.moveTo(8, 10);
+    ctx.lineTo(8, 14);
+    ctx.stroke();
+    ctx.save();
+    ctx.translate(3, -1);
+    ctx.rotate(elapsed * 16);
+    ctx.strokeStyle = friendly ? '#e7f6ff' : '#ffe4ea';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-24, 0);
+    ctx.lineTo(24, 0);
+    ctx.moveTo(0, -24);
+    ctx.lineTo(0, 24);
+    ctx.stroke();
+    ctx.restore();
+    ctx.restore();
+  }
+
   function drawAllyTag(a) {
     if (a.kind === 'wing') return;
-    const text = a.kind === 'aa' ? '我方防空' : a.kind === 'ground' ? '我方地面' : a.kind === 'smallBoss' ? '我方小Boss' : a.kind === 'bigBoss' ? '我方大Boss' : '我方';
+    const text = a.kind === 'heli' ? '我方直升机' : a.kind === 'aa' ? '我方防空' : a.kind === 'ground' ? '我方地面' : a.kind === 'smallBoss' ? '我方小Boss' : a.kind === 'bigBoss' ? '我方大Boss' : '我方';
     ctx.save();
     ctx.font = '12px "Noto Sans SC", sans-serif';
     ctx.textAlign = 'center';
@@ -1494,7 +1605,7 @@
   }
 
   function drawTag(e) {
-    const text = { ground: '地面', aa: '防空', baozi: '小包子', smallBoss: '小Boss', bigBoss: '大Boss' }[e.kind];
+    const text = { ground: '地面', aa: '防空', heli: '直升机', baozi: '小包子', smallBoss: '小Boss', bigBoss: '大Boss' }[e.kind];
     if (!text) return;
     ctx.save();
     ctx.font = '12px "Noto Sans SC", sans-serif';
@@ -1848,6 +1959,7 @@
     }
     if (e.kind === 'ground') drawGround(e);
     else if (e.kind === 'aa') drawAa(e, false);
+    else if (e.kind === 'heli') drawHeli(e, false);
     else if (e.kind === 'baozi') ship(e.x, e.y, PAL.baozi, e.flash, e.scale, true);
     else if (e.kind === 'smallBoss') ship(e.x, e.y, PAL.small, e.flash, e.scale, true);
     else ship(e.x, e.y, PAL.red, e.flash, e.scale || 1, true);
@@ -1866,6 +1978,7 @@
     }
     if (a.kind === 'ground') drawGround(a, true);
     else if (a.kind === 'aa') drawAa(a, true);
+    else if (a.kind === 'heli') drawHeli(a, true);
     else if (a.kind === 'smallBoss') ship(a.x, a.y, PAL.player, a.flash, a.scale, false);
     else if (a.kind === 'bigBoss') ship(a.x, a.y, PAL.player, a.flash, a.scale, false);
     else if (a.kind === 'wing') ship(a.x, a.y, PAL.yellowShip, a.flash, a.scale || ALLY_SHIP_SCALE, false);
@@ -2016,6 +2129,7 @@
         }
         if (e.kind === 'ground') drawGround(e);
         else if (e.kind === 'aa') drawAa(e, false);
+        else if (e.kind === 'heli') drawHeli(e, false);
         else if (e.kind === 'baozi') ship(e.x, e.y, PAL.baozi, e.flash, e.scale, true);
         else if (e.kind === 'smallBoss') ship(e.x, e.y, PAL.small, e.flash, e.scale, true);
         else ship(e.x, e.y, PAL.red, e.flash, e.scale || 1, true);
@@ -2035,6 +2149,7 @@
         }
         if (a.kind === 'ground') drawGround(a, true);
         else if (a.kind === 'aa') drawAa(a, true);
+        else if (a.kind === 'heli') drawHeli(a, true);
         else if (a.kind === 'smallBoss') ship(a.x, a.y, PAL.player, a.flash, a.scale, false);
         else if (a.kind === 'bigBoss') ship(a.x, a.y, PAL.player, a.flash, a.scale, false);
         else if (a.kind === 'wing') ship(a.x, a.y, PAL.yellowShip, a.flash, a.scale || ALLY_SHIP_SCALE, false);
