@@ -25,23 +25,26 @@
   ];
   // 每关道具构成原话没拆比例：一般 5 个、最后一关 12 个。三种球都要出现。
   const ITEM_PLANS = {
-    normal: ['blue', 'yellow', 'green', 'red', 'blue'],
-    final: ['blue', 'yellow', 'green', 'red', 'blue', 'yellow', 'green', 'red', 'blue', 'yellow', 'green', 'red'],
+    normal: ['blue', 'yellow', 'green', 'red', 'onion'],
+    final: ['blue', 'yellow', 'green', 'red', 'onion', 'blue', 'yellow', 'green', 'red', 'onion', 'blue', 'onion'],
   };
   const LIGHTNING_TIME = 15;
   const LIGHTNING_DMG = 3;
   const HEAL_AMOUNT = 4;
-  const ALLY_SHIP_COUNT = 5;
-  const ALLY_GROUND_COUNT = 4;
+  const ALLY_SHIP_COUNT = 3;
+  const ALLY_GROUND_COUNT = 2;
+  const ALLY_SHIP_SCALE = 0.55;
   const MORTAR_INTERVAL = 3;
   const MORTAR_DMG = 3;
-  const START_BOMBS = 5;
+  const START_BOMBS = 10;
+  const ONION_BOMBS = 5;
   const PLAYER_BOMB_DMG = 5;
   const PAL = {
     player: { body: '#166dd4', edge: '#7bcaff', core: '#b8efff', flame: '#b2f4ff', wing: '#61c4ff', glow: '#48a6ff' },
     red: { body: '#a92c4b', edge: '#ff8ca0', core: '#ffccd4', flame: '#ffab75', wing: '#ff819a', glow: '#ff5c7e' },
     baozi: { body: '#1d4eab', edge: '#ffd15c', core: '#fff3ae', flame: '#ffe38a', wing: '#7eb6ff', glow: '#ffd15c' },
     small: { body: '#c24b12', edge: '#ffb088', core: '#ffe0c2', flame: '#ffb15a', wing: '#ff8a4a', glow: '#ff7a3c' },
+    yellowShip: { body: '#e2b423', edge: '#ffe38a', core: '#fff6cc', flame: '#ffe9a0', wing: '#ffd15c', glow: '#ffd15c' },
   };
 
   const keys = new Set();
@@ -152,7 +155,7 @@
   }
 
   function itemCounts(plan) {
-    return plan.reduce((n, type) => { n[type] = (n[type] || 0) + 1; return n; }, { blue: 0, yellow: 0, green: 0, red: 0 });
+    return plan.reduce((n, type) => { n[type] = (n[type] || 0) + 1; return n; }, { blue: 0, yellow: 0, green: 0, red: 0, onion: 0 });
   }
 
   function renderIntel() {
@@ -160,7 +163,7 @@
     const final = itemCounts(ITEM_PLANS.final);
     $('intel-note').textContent = '普通飞机为红色，3 点生命，每 2 秒发射激光，命中扣 1 血。地面炮台与飞机同时出现。';
     $('level-list').innerHTML = LEVELS.map(lv => `<li>${describeLevel(lv)}</li>`).join('');
-    $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、绿 ${normal.green}、红 ${normal.red}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、绿 ${final.green}、红 ${final.red}。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架自主飞机，以及 ${ALLY_GROUND_COUNT} 支我方地面部队；地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。开局 ${START_BOMBS} 颗追踪炸弹，鼠标点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。`;
+    $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、绿 ${normal.green}、红 ${normal.red}、洋葱 ${normal.onion}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、绿 ${final.green}、红 ${final.red}、洋葱 ${final.onion}。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架小型黄色飞机，以及 ${ALLY_GROUND_COUNT} 支我方地面部队；地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。洋葱球：再获得 ${ONION_BOMBS} 颗自己投出的炸弹。开局 ${START_BOMBS} 颗追踪炸弹，鼠标点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。`;
   }
 
   function describeLevel(lv) {
@@ -577,7 +580,7 @@
         homeX: x,
         homeY: y,
         friendly: true,
-        scale: 0.78,
+        scale: ALLY_SHIP_SCALE,
       }));
     }
   }
@@ -646,7 +649,11 @@
       if (player) player.hp = Math.min(15, player.hp + HEAL_AMOUNT);
       burst(it.x, it.y, '#5dffa0', 16);
       tone(520, 0.16);
-    } else {
+    } else if (it.type === 'onion') {
+      bombStock += ONION_BOMBS;
+      burst(it.x, it.y, '#e4b6ff', 18);
+      tone(720, 0.16, 'square', 0.03);
+    } else if (it.type === 'red') {
       summonOwnBosses();
       burst(it.x, it.y, '#ff5c7e', 22);
       tone(180, 0.22, 'sawtooth', 0.04);
@@ -1013,9 +1020,14 @@
   }
 
   function drawItem(it) {
-    const color = it.type === 'blue' ? '#49b7ff' : it.type === 'yellow' ? '#ffd15c' : it.type === 'green' ? '#3ddc7a' : '#ff5a78';
-    const core = it.type === 'blue' ? '#e7f7ff' : it.type === 'yellow' ? '#fff6cc' : it.type === 'green' ? '#e9ffe8' : '#ffe0e6';
-    const label = it.type === 'blue' ? '雷电' : it.type === 'yellow' ? '部队' : it.type === 'green' ? '回血' : 'Boss';
+    const look = {
+      blue: ['#49b7ff', '#e7f7ff', '雷电'],
+      yellow: ['#ffd15c', '#fff6cc', '部队'],
+      green: ['#3ddc7a', '#e9ffe8', '回血'],
+      red: ['#ff5a78', '#ffe0e6', 'Boss'],
+      onion: ['#d9a6ff', '#fff0ff', '洋葱'],
+    }[it.type] || ['#ff5a78', '#ffe0e6', 'Boss'];
+    const [color, core, label] = look;
     ctx.save();
     ctx.shadowColor = color;
     ctx.shadowBlur = 16;
@@ -1023,6 +1035,15 @@
     ctx.beginPath();
     ctx.arc(it.x, it.y, 13, 0, Math.PI * 2);
     ctx.fill();
+    if (it.type === 'onion') {
+      ctx.strokeStyle = '#fff6ff';
+      ctx.lineWidth = 1.4;
+      for (const radius of [8, 5]) {
+        ctx.beginPath();
+        ctx.arc(it.x, it.y, radius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
     ctx.fillStyle = core;
     ctx.beginPath();
     ctx.arc(it.x - 3, it.y - 3, 4.5, 0, Math.PI * 2);
@@ -1201,6 +1222,7 @@
         if (a.kind === 'ground') drawGround(a, true);
         else if (a.kind === 'smallBoss') ship(a.x, a.y, PAL.player, a.flash, a.scale, false);
         else if (a.kind === 'bigBoss') ship(a.x, a.y, PAL.player, a.flash, a.scale, false);
+        else if (a.kind === 'wing') ship(a.x, a.y, PAL.yellowShip, a.flash, a.scale || ALLY_SHIP_SCALE, false);
         else ship(a.x, a.y, PAL.player, a.flash, a.scale || 0.82, false);
         drawHp(a);
         drawAllyTag(a);
@@ -1284,61 +1306,82 @@
     if (mode === 'playing') keys.add(e.key.toLowerCase());
   });
   window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
-  window.addEventListener('blur', () => {
-    keys.clear();
-    if (mode === 'playing') togglePause();
-  });
+  window.addEventListener('blur', () => keys.clear());
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && mode === 'playing') togglePause();
   });
 
+  const arena = $('arena');
   function locate(e) {
     const r = canvas.getBoundingClientRect();
-    return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
+    return { x: (e.clientX - r.left) / (r.width || 1) * W, y: (e.clientY - r.top) / (r.height || 1) * H };
   }
   function placePlayer(p) {
     player.x = Math.max(24, Math.min(W - 24, p.x));
     player.y = Math.max(40, Math.min(H - 38, p.y));
     moveTarget = { x: player.x, y: player.y };
   }
-  function nearPlayer(p) {
-    return !!player && Math.hypot(p.x - player.x, p.y - player.y) < 46;
+  function overArena(e) {
+    const r = arena.getBoundingClientRect();
+    return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
   }
-  canvas.addEventListener('pointerdown', e => {
-    if (mode !== 'playing' || !player) return;
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
+  function onUiControl(e) {
+    return !!(e.target && e.target.closest && e.target.closest('button, a, input, textarea, select'));
+  }
+  function beginPush(e) {
+    if (!player || (e.pointerType === 'mouse' && e.button !== 0) || onUiControl(e) || !overArena(e)) return;
+    if (mode === 'paused') togglePause();
+    if (mode !== 'playing') return;
     const p = locate(e);
     dragging = true;
     shipSelected = true;
-    gesture = { x: p.x, y: p.y, moved: false, pointerId: e.pointerId };
-    try { canvas.setPointerCapture(e.pointerId); } catch {}
+    gesture = { x: p.x, y: p.y, moved: false, originX: player.x, originY: player.y, inArena: true };
+    document.body.classList.add('pushing');
     e.preventDefault();
-  });
-  canvas.addEventListener('pointermove', e => {
-    if (mode !== 'playing' || !player) return;
+  }
+  function movePush(e) {
+    if (!player) return;
+    const held = (e.buttons & 1) === 1;
+    if (!held && !dragging) return;
+    if (!overArena(e) && !gesture) return;
+    if (mode === 'paused') togglePause();
+    if (mode !== 'playing') return;
     const p = locate(e);
-    if (dragging && gesture) {
-      if (Math.hypot(p.x - gesture.x, p.y - gesture.y) > 3) gesture.moved = true;
-      if (gesture.moved) placePlayer(p);
-      return;
+    if (!gesture) {
+      dragging = true;
+      shipSelected = true;
+      gesture = { x: p.x, y: p.y, moved: false, originX: player.x, originY: player.y, inArena: true };
+      document.body.classList.add('pushing');
     }
-    if (shipSelected && e.pointerType === 'mouse' && !e.buttons) moveTarget = p;
-  });
-  function finishGesture(e) {
-    if (!gesture || mode !== 'playing' || !player) {
+    const dx = p.x - gesture.x;
+    const dy = p.y - gesture.y;
+    if (Math.hypot(dx, dy) > 1.5) gesture.moved = true;
+    if (gesture.moved) placePlayer({ x: gesture.originX + dx, y: gesture.originY + dy });
+  }
+  function endPush(e) {
+    document.body.classList.remove('pushing');
+    if (!gesture || !player) {
       dragging = false;
       gesture = null;
       return;
     }
     const p = locate(e);
-    const tap = !gesture.moved && Math.hypot(p.x - gesture.x, p.y - gesture.y) < 8;
-    if (!tap) placePlayer(p);
-    else if (e.pointerType === 'mouse') throwBomb();
+    const dx = p.x - gesture.x;
+    const dy = p.y - gesture.y;
+    const tap = !gesture.moved && Math.hypot(dx, dy) < 8;
+    if (!tap) placePlayer({ x: gesture.originX + dx, y: gesture.originY + dy });
+    else if (mode === 'playing' && gesture.inArena && e.pointerType === 'mouse') throwBomb();
     dragging = false;
     gesture = null;
   }
-  canvas.addEventListener('pointerup', finishGesture);
-  canvas.addEventListener('pointercancel', () => { dragging = false; gesture = null; });
+  window.addEventListener('pointerdown', beginPush);
+  window.addEventListener('pointermove', movePush);
+  window.addEventListener('pointerup', endPush);
+  window.addEventListener('pointercancel', () => {
+    document.body.classList.remove('pushing');
+    dragging = false;
+    gesture = null;
+  });
 
   renderIntel();
   syncHUD();
