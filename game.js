@@ -323,7 +323,7 @@
     score = 0;
     kills = 0;
     elapsed = 0;
-    shipSelected = false;
+    shipSelected = true;
     moveTarget = null;
     bombStock = START_BOMBS;
     player = { x: W / 2, y: H - 95, hp: 15 };
@@ -493,6 +493,32 @@
       e.y += (e.speed + Math.min(elapsed * 0.25, 26)) * dt;
       e.x += Math.sin(elapsed * 1.3 + e.phase) * 23 * dt;
       e.x = Math.max(28, Math.min(W - 28, e.x));
+      return;
+    }
+    if (e.friendly && e.kind === 'wing') {
+      const foe = nearestEnemy(e);
+      const orbit = elapsed * 1.15 + e.phase;
+      const tx = foe ? foe.x + Math.cos(orbit) * 78 : e.homeX + Math.sin(orbit) * 170;
+      const ty = foe ? Math.max(64, Math.min(H - 150, foe.y + 96)) : e.homeY + Math.cos(orbit * 0.8) * 64;
+      const dx = tx - e.x;
+      const dy = ty - e.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const step = Math.min(dist, 200 * dt);
+      e.x += dx / dist * step;
+      e.y += dy / dist * step;
+      e.x = Math.max(28, Math.min(W - 28, e.x));
+      e.y = Math.max(48, Math.min(H - 80, e.y));
+      return;
+    }
+    if (e.friendly && e.kind === 'ground') {
+      const tx = e.homeX + Math.sin(elapsed * 0.8 + e.phase) * 100;
+      const dx = tx - e.x;
+      const dy = e.homeY - e.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const step = Math.min(dist, 90 * dt);
+      e.x += dx / dist * step;
+      e.y += dy / dist * step;
+      e.x = Math.max(36, Math.min(W - 36, e.x));
       return;
     }
     const tx = e.homeX + Math.sin(elapsed * (e.kind === 'bigBoss' ? 0.7 : 0.9) + e.phase) * (e.kind === 'bigBoss' ? 120 : 70);
@@ -1305,4 +1331,5 @@
   syncHUD();
   resize();
   requestAnimationFrame(frame);
+  start();
 })();
