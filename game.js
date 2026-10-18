@@ -252,7 +252,7 @@
     const final = itemCounts(ITEM_PLANS.final);
     $('intel-note').textContent = '普通飞机为红色，3 点生命，每 2 秒发射激光，命中扣 1 血。地面炮台与飞机同时出现。';
     $('level-list').innerHTML = LEVELS.map(lv => `<li>${describeLevel(lv)}</li>`).join('');
-    $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、绿 ${normal.green}、红 ${normal.red}、洋葱 ${normal.onion}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、绿 ${final.green}、红 ${final.red}、洋葱 ${final.onion}。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架小型黄色飞机，以及 ${ALLY_GROUND_COUNT} 支我方地面部队；地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。洋葱球：再获得 ${ONION_BOMBS} 颗自己投出的炸弹。开局 ${START_BOMBS} 颗追踪炸弹，鼠标左键点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。中子弹每关 ${AURORA_COUNT} 发，鼠标右键射出极光，不是激光，打中扣 ${AURORA_DMG} 血。`;
+    $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、绿 ${normal.green}、红 ${normal.red}、洋葱 ${normal.onion}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、绿 ${final.green}、红 ${final.red}、洋葱 ${final.onion}。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架小型黄色飞机，以及 ${ALLY_GROUND_COUNT} 支我方地面部队；地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。洋葱球：再获得 ${ONION_BOMBS} 颗自己投出的炸弹。开局 ${START_BOMBS} 颗追踪炸弹，鼠标左键点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。中子弹每关 ${AURORA_COUNT} 发，鼠标右键射出一小条追踪极光，打中扣 ${AURORA_DMG} 血。`;
   }
 
   function describeLevel(lv) {
@@ -829,14 +829,19 @@
   function fireAurora() {
     if (mode !== 'playing' || !player || auroraStock <= 0) return;
     auroraStock--;
+    const target = nearestEnemy(player);
+    const angle = target ? Math.atan2(target.y - (player.y - 30), target.x - player.x) : -Math.PI / 2;
     lasers.push({
       x: player.x,
       y: player.y - 30,
-      vx: 0,
-      vy: -980,
+      vx: Math.cos(angle) * 460,
+      vy: Math.sin(angle) * 460,
       enemy: false,
       dmg: AURORA_DMG,
       aurora: true,
+      homing: true,
+      target,
+      age: 0,
       dead: false,
     });
     muzzleFlash(player.x, player.y - 30, '#7dffc4');
@@ -1033,8 +1038,9 @@
         if (!b.target || b.target.dead || b.target.hp <= 0) b.target = nearestEnemy(b);
         if (b.target) {
           const angle = Math.atan2(b.target.y - b.y, b.target.x - b.x);
-          b.vx = Math.cos(angle) * 270;
-          b.vy = Math.sin(angle) * 270;
+          const speed = b.aurora ? 460 : 270;
+          b.vx = Math.cos(angle) * speed;
+          b.vy = Math.sin(angle) * speed;
         }
       }
       b.x += b.vx * dt;
@@ -1442,40 +1448,39 @@
     const uy = b.vy / len;
     const px = -uy;
     const py = ux;
-    const length = 86;
+    const length = 34;
     ctx.save();
     const sheets = [
-      ['#6a3dff', 0.34, -18],
-      ['#39f5a2', 0.4, -6],
-      ['#7af7ff', 0.36, 6],
-      ['#f0b6ff', 0.32, 16],
+      ['#6a3dff', 0.4, -6],
+      ['#39f5a2', 0.46, -1],
+      ['#7af7ff', 0.42, 3],
     ];
     for (const [color, alpha, shift] of sheets) {
       ctx.fillStyle = color;
       ctx.globalAlpha = alpha;
       ctx.beginPath();
-      for (let i = 0; i <= 12; i++) {
-        const t = i / 12;
-        const wave = Math.sin(elapsed * 2.4 + t * 7 + shift) * 8;
+      for (let i = 0; i <= 8; i++) {
+        const t = i / 8;
+        const wave = Math.sin(elapsed * 3 + t * 8 + shift) * 2.4;
         const x = b.x - ux * length * t + px * (shift + wave);
         const y = b.y - uy * length * t + py * (shift + wave);
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
-      for (let i = 12; i >= 0; i--) {
-        const t = i / 12;
-        const wave = Math.sin(elapsed * 2.4 + t * 7 + shift) * 8;
-        const x = b.x - ux * length * t + px * (shift + wave + 11);
-        const y = b.y - uy * length * t + py * (shift + wave + 11);
+      for (let i = 8; i >= 0; i--) {
+        const t = i / 8;
+        const wave = Math.sin(elapsed * 3 + t * 8 + shift) * 2.4;
+        const x = b.x - ux * length * t + px * (shift + wave + 4);
+        const y = b.y - uy * length * t + py * (shift + wave + 4);
         ctx.lineTo(x, y);
       }
       ctx.closePath();
       ctx.fill();
     }
-    ctx.globalAlpha = 0.55;
+    ctx.globalAlpha = 0.7;
     ctx.fillStyle = '#f7fff8';
     ctx.beginPath();
-    ctx.ellipse(b.x, b.y, 10, 16, 0, 0, Math.PI * 2);
+    ctx.ellipse(b.x, b.y, 3.5, 5, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
