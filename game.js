@@ -25,8 +25,8 @@
   ];
   // 每关道具构成原话没拆比例：一般 5 个、最后一关 12 个。三种球都要出现。
   const ITEM_PLANS = {
-    normal: ['blue', 'yellow', 'green', 'red', 'onion'],
-    final: ['blue', 'yellow', 'green', 'red', 'onion', 'blue', 'yellow', 'green', 'red', 'onion', 'blue', 'onion'],
+    normal: ['blue', 'yellow', 'green', 'red', 'onion', 'pink'],
+    final: ['blue', 'yellow', 'green', 'red', 'onion', 'pink', 'blue', 'yellow', 'green', 'red', 'onion', 'pink', 'blue', 'onion'],
   };
   const LIGHTNING_TIME = 15;
   const LIGHTNING_DMG = 3;
@@ -43,6 +43,7 @@
   const PLAYER_BOMB_DMG = 5;
   const AURORA_COUNT = 30;
   const AURORA_DMG = 3;
+  const PINK_AURORA = 5;
   const PAL = {
     player: { body: '#166dd4', edge: '#7bcaff', core: '#b8efff', flame: '#b2f4ff', wing: '#61c4ff', glow: '#48a6ff' },
     red: { body: '#a92c4b', edge: '#ff8ca0', core: '#ffccd4', flame: '#ffab75', wing: '#ff819a', glow: '#ff5c7e' },
@@ -244,7 +245,7 @@
   }
 
   function itemCounts(plan) {
-    return plan.reduce((n, type) => { n[type] = (n[type] || 0) + 1; return n; }, { blue: 0, yellow: 0, green: 0, red: 0, onion: 0 });
+    return plan.reduce((n, type) => { n[type] = (n[type] || 0) + 1; return n; }, { blue: 0, yellow: 0, green: 0, red: 0, onion: 0, pink: 0 });
   }
 
   function renderIntel() {
@@ -252,7 +253,7 @@
     const final = itemCounts(ITEM_PLANS.final);
     $('intel-note').textContent = '普通飞机为红色，3 点生命，每 2 秒发射激光，命中扣 1 血。地面炮台与飞机同时出现。';
     $('level-list').innerHTML = LEVELS.map(lv => `<li>${describeLevel(lv)}</li>`).join('');
-    $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、绿 ${normal.green}、红 ${normal.red}、洋葱 ${normal.onion}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、绿 ${final.green}、红 ${final.red}、洋葱 ${final.onion}。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架小型黄色飞机，以及 ${ALLY_GROUND_COUNT} 支我方地面部队；地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。洋葱球：再获得 ${ONION_BOMBS} 颗自己投出的炸弹。开局 ${START_BOMBS} 颗追踪炸弹，鼠标左键点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。中子弹每关 ${AURORA_COUNT} 发，鼠标右键射出一小条追踪极光，打中扣 ${AURORA_DMG} 血。`;
+    $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、绿 ${normal.green}、红 ${normal.red}、洋葱 ${normal.onion}、粉 ${normal.pink}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、绿 ${final.green}、红 ${final.red}、洋葱 ${final.onion}、粉 ${final.pink}。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架小型黄色飞机，以及 ${ALLY_GROUND_COUNT} 支我方地面部队；地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。洋葱球：再获得 ${ONION_BOMBS} 颗自己投出的炸弹。开局 ${START_BOMBS} 颗追踪炸弹，鼠标左键点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。中子弹每关 ${AURORA_COUNT} 发，鼠标右键射出一小条追踪极光，打中扣 ${AURORA_DMG} 血。粉色小球：极光再加 ${PINK_AURORA} 发。`;
   }
 
   function describeLevel(lv) {
@@ -814,6 +815,10 @@
       if (player) player.hp = Math.min(15, player.hp + HEAL_AMOUNT);
       burst(it.x, it.y, '#5dffa0', 16);
       tone(520, 0.16);
+    } else if (it.type === 'pink') {
+      auroraStock += PINK_AURORA;
+      burst(it.x, it.y, '#ff8ad4', 16);
+      tone(760, 0.14, 'square', 0.03);
     } else if (it.type === 'onion') {
       bombStock += ONION_BOMBS;
       burst(it.x, it.y, '#e4b6ff', 18);
@@ -1267,6 +1272,7 @@
       green: ['#3ddc7a', '#e9ffe8', '回血'],
       red: ['#ff5a78', '#ffe0e6', 'Boss'],
       onion: ['#d9a6ff', '#fff0ff', '洋葱'],
+      pink: ['#ff6eb4', '#ffe4f4', '极光'],
     }[it.type] || ['#ff5a78', '#ffe0e6', 'Boss'];
     const [color, core, label] = look;
     ctx.save();
@@ -1274,7 +1280,7 @@
     ctx.shadowBlur = 16;
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.arc(it.x, it.y, 13, 0, Math.PI * 2);
+    ctx.arc(it.x, it.y, it.type === 'pink' ? 9 : 13, 0, Math.PI * 2);
     ctx.fill();
     if (it.type === 'onion') {
       ctx.strokeStyle = '#fff6ff';
