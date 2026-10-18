@@ -40,7 +40,8 @@
   const ALLY_SHIP_SCALE = 0.55;
   const MORTAR_INTERVAL = 3;
   const MORTAR_DMG = 3;
-  const BASE_MAX = 25;
+  const PLAYER_MAX = 16;
+  const BASE_MAX = 10;
   const BASE_LINE = H - 100;
   const START_BOMBS = 50;
   const ONION_BOMBS = 5;
@@ -225,9 +226,9 @@
 
   function syncHUD() {
     const lv = LEVELS[levelIndex];
-    const hp = player?.hp ?? 15;
+    const hp = player?.hp ?? PLAYER_MAX;
     $('hp').textContent = hp;
-    $('health-bar').innerHTML = Array.from({ length: 15 }, (_, i) => `<i class="${i < hp ? '' : 'empty'}"></i>`).join('');
+    $('health-bar').innerHTML = Array.from({ length: PLAYER_MAX }, (_, i) => `<i class="${i < hp ? '' : 'empty'}"></i>`).join('');
     $('health-bar').classList.toggle('low', hp <= 5);
     $('score').textContent = String(score).padStart(6, '0');
     $('kills').innerHTML = `${kills} <small>个</small>`;
@@ -242,7 +243,7 @@
     $('aurora').textContent = String(auroraStock);
     $('base-hp').textContent = baseHp;
     $('base-bar').innerHTML = Array.from({ length: BASE_MAX }, (_, i) => `<i class="${i < baseHp ? '' : 'empty'}"></i>`).join('');
-    $('base-bar').classList.toggle('low', baseHp <= 8);
+    $('base-bar').classList.toggle('low', baseHp <= 3);
   }
 
   function itemCounts(plan) {
@@ -407,7 +408,7 @@
     const lv = LEVELS[levelIndex];
     resetWaveFlags();
     itemPlanNow = levelIndex === LEVELS.length - 1 ? ITEM_PLANS.final : ITEM_PLANS.normal;
-    player.hp = 15;
+    player.hp = PLAYER_MAX;
     player.x = W / 2;
     player.y = H - 95;
     const opening = Math.min(lv.planes || 0, 3);
@@ -445,7 +446,7 @@
     auroraStock = AURORA_COUNT;
     baseHp = BASE_MAX;
     baseFlash = 0;
-    player = { x: W / 2, y: H - 95, hp: 15 };
+    player = { x: W / 2, y: H - 95, hp: PLAYER_MAX };
     beginWave();
   }
 
@@ -808,7 +809,7 @@
       burst(it.x, it.y, '#ffd15c', 18);
       tone(640, 0.18);
     } else if (it.type === 'green') {
-      if (player) player.hp = Math.min(15, player.hp + HEAL_AMOUNT);
+      if (player) player.hp = Math.min(PLAYER_MAX, player.hp + HEAL_AMOUNT);
       burst(it.x, it.y, '#5dffa0', 16);
       tone(520, 0.16);
     } else if (it.type === 'pink') {
