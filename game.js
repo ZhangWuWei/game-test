@@ -1010,6 +1010,19 @@
       }
       b.x += b.vx * dt;
       b.y += b.vy * dt;
+      if (b.bomb && !b.mortar && !b.dead && Math.random() < 0.55) {
+        particles.push({
+          kind: 'spark',
+          x: b.x + 5,
+          y: b.y - 26,
+          vx: (Math.random() - 0.5) * 18,
+          vy: -24 - Math.random() * 36,
+          life: 0.16 + Math.random() * 0.1,
+          max: 0.26,
+          color: Math.random() < 0.45 ? '#fff2c4' : '#ff7a22',
+          w: 2.2,
+        });
+      }
       if (b.dead || mode !== 'playing') continue;
       if (b.enemy) {
         const rx = b.bomb ? 28 : 17;
@@ -1255,6 +1268,48 @@
     ctx.restore();
   }
 
+  function drawRoundBomb(b) {
+    const flicker = 0.82 + Math.sin(elapsed * 32 + b.x * 0.2) * 0.18;
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.fillStyle = '#141414';
+    ctx.strokeStyle = '#3c3c3c';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 3, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#5a5a5a';
+    ctx.beginPath();
+    ctx.arc(-4, 0, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#8a6a45';
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(1, -8);
+    ctx.quadraticCurveTo(10, -16, 5, -24);
+    ctx.stroke();
+    const fx = 5;
+    const fy = -26;
+    ctx.shadowColor = '#ff9a2a';
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = '#ffb020';
+    ctx.beginPath();
+    ctx.ellipse(fx, fy, 5.2 * flicker, 8 * flicker, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ff5a12';
+    ctx.beginPath();
+    ctx.ellipse(fx, fy + 1.5, 2.8 * flicker, 4.6 * flicker, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#fff2c4';
+    ctx.beginPath();
+    ctx.arc(fx, fy + 2, 1.5 * flicker, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
   function drawLaser(b) {
     if (b.lightning) {
       ctx.save();
@@ -1290,18 +1345,7 @@
       return;
     }
     if (b.bomb) {
-      ctx.save();
-      ctx.shadowColor = '#ff8a1e';
-      ctx.shadowBlur = 18;
-      ctx.fillStyle = '#ffb020';
-      ctx.beginPath();
-      ctx.arc(b.x, b.y, 12, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#fff4d0';
-      ctx.beginPath();
-      ctx.arc(b.x - 3, b.y - 3, 4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
+      drawRoundBomb(b);
       return;
     }
     const heavy = (b.dmg || 1) >= 3;
