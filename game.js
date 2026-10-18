@@ -106,6 +106,10 @@
   let lightning = 0;
   let flame = 0;
   let flameSerial = 0;
+  let firstPerson = false;
+  let shipBank = 0;
+  let shipLeanX = W / 2;
+  let viewPress = false;
   let bombStock = START_BOMBS;
   let auroraStock = AURORA_COUNT;
   let baseHp = BASE_MAX;
@@ -465,6 +469,9 @@
     baseHp = BASE_MAX;
     baseFlash = 0;
     player = { x: W / 2, y: H - 95, hp: PLAYER_MAX };
+    firstPerson = false;
+    shipBank = 0;
+    shipLeanX = player.x;
     beginWave();
   }
 
@@ -1100,6 +1107,9 @@
     }
     player.x = Math.max(24, Math.min(W - 24, player.x));
     player.y = Math.max(40, Math.min(H - 38, player.y));
+    const lean = Math.max(-0.62, Math.min(0.62, (player.x - shipLeanX) * 0.04));
+    shipLeanX += (player.x - shipLeanX) * Math.min(1, dt * 3.2);
+    shipBank += (lean - shipBank) * Math.min(1, dt * 8);
 
     if (lightning > 0) {
       lightning = Math.max(0, lightning - dt);
@@ -1291,10 +1301,11 @@
     if (mode === 'playing' && quotaMet()) levelClear();
   }
 
-  function ship(x, y, pal, flash, scale, faceDown) {
+  function ship(x, y, pal, flash, scale, faceDown, bank = 0) {
     ctx.save();
     ctx.translate(x, y);
     if (faceDown) ctx.rotate(Math.PI);
+    if (bank) ctx.rotate(bank);
     ctx.scale(scale, scale);
     ctx.shadowColor = pal.glow;
     ctx.shadowBlur = 15;
@@ -1742,6 +1753,7 @@
   function drawFlame() {
     ctx.save();
     ctx.translate(player.x, player.y - 24);
+    ctx.rotate(shipBank);
     const flick = Math.sin(elapsed * 28) * 10;
     const grad = ctx.createLinearGradient(0, 0, 0, -196);
     grad.addColorStop(0, 'rgba(255,250,230,0.95)');
@@ -1758,12 +1770,243 @@
     ctx.restore();
   }
 
+  const FP_HORIZON = 248;
+
+  function viewButtonRect() {
+    const w = 96;
+    const h = 32;
+    if (firstPerson || !player) return { x: W - w - 16, y: H - h - 16, w, h };
+    let x = player.x + 42;
+    let y = player.y - 20;
+    if (x + w > W - 8) x = player.x - 42 - w;
+    x = Math.max(8, x);
+    y = Math.max(8, Math.min(H - h - 8, y));
+    return { x, y, w, h };
+  }
+
+  function hitViewButton(p) {
+    const r = viewButtonRect();
+    return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+  }
+
+  function drawViewButton() {
+    if (!player || mode === 'ready' || mode === 'over' || mode === 'victory' || mode === 'levelclear') return;
+    const r = viewButtonRect();
+    ctx.save();
+    ctx.fillStyle = firstPerson ? 'rgba(16, 48, 88, 0.94)' : 'rgba(8, 20, 40, 0.9)';
+    ctx.strokeStyle = '#9fd4ff';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.rect(r.x, r.y, r.w, r.h);
+    ctx.fill();
+    ctx.stroke();
+    ctx.font = '15px "Noto Sans SC", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#e7f6ff';
+    ctx.fillText(firstPerson ? '返回俯视' : '第一视角', r.x + r.w / 2, r.y + r.h / 2 + 0.5);
+    ctx.restore();
+  }
+
+  function projectWorld(wx, wy) {
+    const depth = player.y - wy;
+    const lateral = wx - player.x;
+    const persp = 250 / (Math.max(12, depth) + 78);
+    return {
+      x: W / 2 + lateral * persp * 1.2,
+      y: FP_HORIZON + persp * 175,
+      scale: Math.max(0.16, Math.min(1.85, persp * 0.9)),
+      depth,
+    };
+  }
+
+  function withProjected(entity, drawFn) {
+    const p = projectWorld(entity.x, entity.y);
+    if (p.depth < -48 || p.depth > 1700) return;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.scale(p.scale, p.scale);
+    ctx.translate(-entity.x, -entity.y);
+    drawFn();
+    ctx.restore();
+  }
+
+  function paintEnemyWorld(e) {
+    if (e.kind === 'bigBoss') {
+      ctx.save();
+      ctx.fillStyle = '#ff335522';
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, 58, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    if (e.kind === 'ground') drawGround(e);
+    else if (e.kind === 'aa') drawAa(e, false);
+    else if (e.kind === 'baozi') ship(e.x, e.y, PAL.baozi, e.flash, e.scale, true);
+    else if (e.kind === 'smallBoss') ship(e.x, e.y, PAL.small, e.flash, e.scale, true);
+    else ship(e.x, e.y, PAL.red, e.flash, e.scale || 1, true);
+    drawHp(e);
+    drawTag(e);
+  }
+
+  function paintAllyWorld(a) {
+    if (a.kind === 'bigBoss') {
+      ctx.save();
+      ctx.fillStyle = '#49b7ff22';
+      ctx.beginPath();
+      ctx.arc(a.x, a.y, 58, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    if (a.kind === 'ground') drawGround(a, true);
+    else if (a.kind === 'aa') drawAa(a, true);
+    else if (a.kind === 'smallBoss') ship(a.x, a.y, PAL.player, a.flash, a.scale, false);
+    else if (a.kind === 'bigBoss') ship(a.x, a.y, PAL.player, a.flash, a.scale, false);
+    else if (a.kind === 'wing') ship(a.x, a.y, PAL.yellowShip, a.flash, a.scale || ALLY_SHIP_SCALE, false);
+    else ship(a.x, a.y, PAL.player, a.flash, a.scale || 0.82, false);
+    drawHp(a);
+    drawAllyTag(a);
+  }
+
+  function drawFirstPerson(dt) {
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#02040e');
+    sky.addColorStop(0.38, '#16325c');
+    sky.addColorStop(0.62, '#0c1c34');
+    sky.addColorStop(1, '#070d16');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.save();
+    ctx.translate(W / 2, FP_HORIZON);
+    for (const s of stars) {
+      if (mode !== 'paused') s.y = (s.y + s.speed * dt) % H;
+      const sy = (s.y / H - 0.62) * 560;
+      const parallax = (player.x - W / 2) * 0.35;
+      ctx.globalAlpha = s.a;
+      ctx.fillStyle = '#d5e6ff';
+      ctx.beginPath();
+      ctx.arc(s.x - W / 2 - parallax, sy, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    const ground = ctx.createLinearGradient(0, 0, 0, 520);
+    ground.addColorStop(0, '#24507f');
+    ground.addColorStop(0.28, '#14304f');
+    ground.addColorStop(1, '#070d18');
+    ctx.fillStyle = ground;
+    ctx.beginPath();
+    ctx.moveTo(-78, 1);
+    ctx.lineTo(78, 1);
+    ctx.lineTo(1040, 580);
+    ctx.lineTo(-1040, 580);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(158, 196, 255, 0.28)';
+    ctx.lineWidth = 1;
+    const lane = ((player.x % 70) + 70) % 70;
+    for (let i = -10; i <= 10; i++) {
+      const x0 = i * 70 - lane;
+      ctx.beginPath();
+      ctx.moveTo(x0 * 0.16, 0);
+      ctx.lineTo(x0 * 3.6, 580);
+      ctx.stroke();
+    }
+    const march = (((-player.y) % 64) + 64) % 64;
+    for (let i = 0; i < 8; i++) {
+      const y = 18 + ((i * 64 + march) % 512);
+      const half = 78 + y * 1.65;
+      ctx.beginPath();
+      ctx.moveTo(-half, y);
+      ctx.lineTo(half, y);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = '#d5e8ff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-980, 0);
+    ctx.lineTo(980, 0);
+    ctx.stroke();
+    ctx.restore();
+
+    const marks = [];
+    for (const e of enemies) {
+      if (!e.dead) marks.push({ depth: player.y - e.y, draw: () => withProjected(e, () => paintEnemyWorld(e)) });
+    }
+    for (const a of allies) {
+      if (!a.dead) marks.push({ depth: player.y - a.y, draw: () => withProjected(a, () => paintAllyWorld(a)) });
+    }
+    for (const it of items) marks.push({ depth: player.y - it.y, draw: () => withProjected(it, () => drawItem(it)) });
+    for (const b of lasers) marks.push({ depth: player.y - b.y, draw: () => withProjected(b, () => drawLaser(b)) });
+    for (const p of particles) marks.push({ depth: player.y - p.y, draw: () => withProjected(p, () => {
+      const fade = Math.max(0, p.life / p.max);
+      ctx.globalAlpha = fade;
+      if (p.kind === 'ring') {
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (p.kind === 'flash') {
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, p.w || 2.5, p.w || 2.5);
+      }
+      ctx.globalAlpha = 1;
+    }) });
+    marks.sort((a, b) => b.depth - a.depth);
+    for (const m of marks) m.draw();
+
+    ctx.save();
+    ctx.translate(W / 2, H + 18);
+    if (flame > 0) {
+      ctx.save();
+      ctx.translate(0, -78);
+      const flick = Math.sin(elapsed * 28) * 14;
+      const grad = ctx.createLinearGradient(0, 0, 0, -280);
+      grad.addColorStop(0, 'rgba(255,250,230,0.95)');
+      grad.addColorStop(0.2, 'rgba(255,186,60,0.8)');
+      grad.addColorStop(0.55, 'rgba(255,78,24,0.35)');
+      grad.addColorStop(1, 'rgba(255,40,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(-18, 0);
+      ctx.quadraticCurveTo(-120 - flick, -120, -10, -250);
+      ctx.quadraticCurveTo(0, -275, 10, -250);
+      ctx.quadraticCurveTo(120 + flick, -110, 18, 0);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+    ship(W / 2, H + 30, PAL.player, hitFlash, 2.15, false, 0);
+
+    ctx.save();
+    ctx.font = '14px "Noto Sans SC", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#d7e9ff';
+    ctx.fillText('第一视角', 18, 28);
+    ctx.restore();
+  }
+
   function draw(dt) {
     const jx = shake > 0.2 ? (Math.random() - 0.5) * shake : 0;
     const jy = shake > 0.2 ? (Math.random() - 0.5) * shake : 0;
     ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, jx * canvas.width / W, jy * canvas.height / H);
     ctx.fillStyle = '#050a17';
     ctx.fillRect(0, 0, W, H);
+    if (firstPerson && player && mode !== 'ready') {
+      drawFirstPerson(dt);
+      if (hitFlash > 0) {
+        ctx.fillStyle = `rgba(255,70,100,${hitFlash * 0.6})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+      drawViewButton();
+      return;
+    }
     const nebula = ctx.createRadialGradient(W * 0.7, H * 0.33, 0, W * 0.7, H * 0.33, 420);
     nebula.addColorStop(0, '#14234b55');
     nebula.addColorStop(0.5, '#13172e33');
@@ -1870,7 +2113,7 @@
           ctx.fillText('已选中', player.x, player.y - 40);
           ctx.restore();
         }
-        ship(player.x, player.y, PAL.player, hitFlash, 1, false);
+        ship(player.x, player.y, PAL.player, hitFlash, 1, false, shipBank);
         if (flame > 0) drawFlame();
       }
       for (const b of lasers) drawLaser(b);
@@ -1899,6 +2142,7 @@
       ctx.fillStyle = `rgba(255,70,100,${hitFlash * 0.6})`;
       ctx.fillRect(0, 0, W, H);
     }
+    drawViewButton();
   }
 
   function frame(now) {
@@ -1984,9 +2228,15 @@
   }
   function beginPush(e) {
     if (!player || (e.pointerType === 'mouse' && e.button !== 0) || onUiControl(e) || !overArena(e)) return;
+    const p = locate(e);
+    if ((mode === 'playing' || mode === 'paused') && hitViewButton(p)) {
+      firstPerson = !firstPerson;
+      viewPress = true;
+      e.preventDefault();
+      return;
+    }
     if (mode === 'paused') togglePause();
     if (mode !== 'playing') return;
-    const p = locate(e);
     dragging = true;
     shipSelected = true;
     gesture = { x: p.x, y: p.y, moved: false, originX: player.x, originY: player.y, inArena: true };
@@ -1994,6 +2244,7 @@
     e.preventDefault();
   }
   function movePush(e) {
+    if (viewPress) return;
     if (!player) return;
     const held = (e.buttons & 1) === 1;
     if (!held && !dragging) return;
@@ -2014,6 +2265,12 @@
   }
   function endPush(e) {
     document.body.classList.remove('pushing');
+    if (viewPress) {
+      viewPress = false;
+      dragging = false;
+      gesture = null;
+      return;
+    }
     if (!gesture || !player) {
       dragging = false;
       gesture = null;
@@ -2041,6 +2298,15 @@
     document.body.classList.remove('pushing');
     dragging = false;
     gesture = null;
+    viewPress = false;
+  });
+  window.addEventListener('pointermove', e => {
+    if (!player || !overArena(e)) {
+      canvas.style.cursor = '';
+      return;
+    }
+    const p = locate(e);
+    canvas.style.cursor = hitViewButton(p) && (mode === 'playing' || mode === 'paused') ? 'pointer' : '';
   });
 
   renderIntel();
