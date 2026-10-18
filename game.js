@@ -38,7 +38,7 @@
   const MORTAR_DMG = 3;
   const BASE_MAX = 25;
   const BASE_LINE = H - 100;
-  const START_BOMBS = 10;
+  const START_BOMBS = 50;
   const ONION_BOMBS = 5;
   const PLAYER_BOMB_DMG = 5;
   const PAL = {
