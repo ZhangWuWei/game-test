@@ -41,7 +41,7 @@
   const MORTAR_INTERVAL = 3;
   const MORTAR_DMG = 3;
   const PLAYER_MAX = 26;
-  const BASE_MAX = 20;
+  const BASE_MAX = 19;
   const BASE_LINE = H - 100;
   const START_BOMBS = 50;
   const ONION_BOMBS = 5;
