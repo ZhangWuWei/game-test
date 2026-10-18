@@ -31,7 +31,10 @@
   const LIGHTNING_TIME = 15;
   const LIGHTNING_DMG = 3;
   const HEAL_AMOUNT = 4;
-  const ALLY_SHIP_COUNT = 15;
+  const ALLY_SHIP_COUNT = 5;
+  const ALLY_GROUND_COUNT = 4;
+  const MORTAR_INTERVAL = 3;
+  const MORTAR_DMG = 3;
   const START_BOMBS = 5;
   const PLAYER_BOMB_DMG = 5;
   const PAL = {
@@ -156,7 +159,7 @@
     const final = itemCounts(ITEM_PLANS.final);
     $('intel-note').textContent = '普通飞机为红色，3 点生命，每 2 秒发射激光，命中扣 1 血。地面炮台与飞机同时出现。';
     $('level-list').innerHTML = LEVELS.map(lv => `<li>${describeLevel(lv)}</li>`).join('');
-    $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、绿 ${normal.green}、红 ${normal.red}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、绿 ${final.green}、红 ${final.red}。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 艘我方飞船。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。开局 ${START_BOMBS} 颗追踪炸弹，鼠标点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。`;
+    $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、绿 ${normal.green}、红 ${normal.red}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、绿 ${final.green}、红 ${final.red}。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架自主飞机，以及 ${ALLY_GROUND_COUNT} 支我方地面部队；地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。开局 ${START_BOMBS} 颗追踪炸弹，鼠标点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。`;
   }
 
   function describeLevel(lv) {
@@ -541,16 +544,48 @@
     for (let i = 0; i < count; i++) {
       const n = start + i;
       const col = n % 5;
-      const row = Math.floor(n / 5) % 4;
-      const x = 100 + col * 150;
-      const y = 188 + row * 58;
-      allies.push(makeCraft('wing', x, -24 - (i % 6) * 16, {
+      const x = 120 + col * 140;
+      const y = 210 + Math.floor(n / 5) * 64;
+      allies.push(makeCraft('wing', x, -30 - i * 14, {
         homeX: x,
         homeY: y,
         friendly: true,
-        scale: 0.62,
+        scale: 0.78,
       }));
     }
+  }
+
+  function summonGroundTroops(count) {
+    const start = allies.filter(a => a.friendly && a.kind === 'ground' && !a.dead).length;
+    for (let i = 0; i < count; i++) {
+      const n = start + i;
+      const x = 110 + (n % 4) * 185;
+      const y = 455;
+      allies.push(makeCraft('ground', x, H + 28, {
+        homeX: x,
+        homeY: y,
+        friendly: true,
+        timer: 0,
+      }));
+    }
+  }
+
+  function fireMortar(from, target) {
+    const flight = 0.85;
+    const gravity = 520;
+    lasers.push({
+      x: from.x,
+      y: from.y - 8,
+      vx: (target.x - from.x) / flight,
+      vy: (target.y - (from.y - 8)) / flight - 0.5 * gravity * flight,
+      gravity,
+      enemy: false,
+      friendly: true,
+      mortar: true,
+      bomb: true,
+      dmg: MORTAR_DMG,
+      dead: false,
+    });
   }
 
   function summonOwnBosses() {
@@ -577,6 +612,7 @@
       tone(880, 0.16, 'square', 0.03);
     } else if (it.type === 'yellow') {
       summonShips(ALLY_SHIP_COUNT);
+      summonGroundTroops(ALLY_GROUND_COUNT);
       burst(it.x, it.y, '#ffd15c', 18);
       tone(640, 0.18);
     } else if (it.type === 'green') {
@@ -627,10 +663,17 @@
   function allyWeapons(a, dt) {
     const target = nearestEnemy(a);
     if (!target || a.y < 8) return;
-    if (a.kind === 'wing' || a.kind === 'ground') {
+    if (a.kind === 'ground') {
       a.timer += dt;
-      const interval = a.kind === 'ground' ? 0.75 : 0.45;
-      if (a.timer >= interval) {
+      if (a.timer >= MORTAR_INTERVAL) {
+        a.timer -= MORTAR_INTERVAL;
+        fireMortar(a, target);
+      }
+      return;
+    }
+    if (a.kind === 'wing') {
+      a.timer += dt;
+      if (a.timer >= 0.45) {
         a.timer = 0;
         fireFriendly(a, target, 1, 380, 0, false);
       }
@@ -749,6 +792,7 @@
     }
 
     for (const b of lasers) {
+      if (b.mortar && !b.dead) b.vy += (b.gravity || 520) * dt;
       if (b.homing && !b.dead) {
         b.age = (b.age || 0) + dt;
         if (b.age > 8) {
@@ -830,7 +874,12 @@
       }
       return true;
     });
-    lasers = lasers.filter(b => !b.dead && (b.homing || (b.y > -50 && b.y < H + 50 && b.x > -50 && b.x < W + 50)));
+    lasers = lasers.filter(b => {
+      if (b.dead) return false;
+      if (b.homing) return true;
+      if (b.mortar) return b.y < H + 80 && b.x > -80 && b.x < W + 80;
+      return b.y > -50 && b.y < H + 50 && b.x > -50 && b.x < W + 50;
+    });
     $('time').textContent = $('arena-time').textContent = formatTime(elapsed);
     if (mode === 'playing' && quotaMet()) levelClear();
   }
@@ -918,7 +967,7 @@
 
   function drawHp(e) {
     if (e.maxHp <= 3) {
-      const color = e.kind === 'ground' ? '#e2c86a' : '#f27088';
+      const color = e.friendly ? '#8ecbff' : e.kind === 'ground' ? '#e2c86a' : '#f27088';
       for (let i = 0; i < e.maxHp; i++) {
         ctx.fillStyle = i < e.hp ? color : '#2c2433';
         ctx.fillRect(e.x - 17 + i * 12, e.y - 34, 9, 3);
@@ -936,7 +985,7 @@
   function drawItem(it) {
     const color = it.type === 'blue' ? '#49b7ff' : it.type === 'yellow' ? '#ffd15c' : it.type === 'green' ? '#3ddc7a' : '#ff5a78';
     const core = it.type === 'blue' ? '#e7f7ff' : it.type === 'yellow' ? '#fff6cc' : it.type === 'green' ? '#e9ffe8' : '#ffe0e6';
-    const label = it.type === 'blue' ? '雷电' : it.type === 'yellow' ? '15艘' : it.type === 'green' ? '回血' : 'Boss';
+    const label = it.type === 'blue' ? '雷电' : it.type === 'yellow' ? '部队' : it.type === 'green' ? '回血' : 'Boss';
     ctx.save();
     ctx.shadowColor = color;
     ctx.shadowBlur = 16;
@@ -958,7 +1007,7 @@
 
   function drawAllyTag(a) {
     if (a.kind === 'wing') return;
-    const text = a.kind === 'smallBoss' ? '我方小Boss' : a.kind === 'bigBoss' ? '我方大Boss' : '我方';
+    const text = a.kind === 'ground' ? '我方地面' : a.kind === 'smallBoss' ? '我方小Boss' : a.kind === 'bigBoss' ? '我方大Boss' : '我方';
     ctx.save();
     ctx.font = '12px "Noto Sans SC", sans-serif';
     ctx.textAlign = 'center';
@@ -996,6 +1045,20 @@
         y -= 8;
         ctx.lineTo(x, y);
       }
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
+    if (b.mortar) {
+      ctx.save();
+      ctx.shadowColor = '#9ad7ff';
+      ctx.shadowBlur = 12;
+      ctx.fillStyle = '#d7ecff';
+      ctx.strokeStyle = '#3d7dff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, 7, 0, Math.PI * 2);
+      ctx.fill();
       ctx.stroke();
       ctx.restore();
       return;
