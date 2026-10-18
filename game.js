@@ -1761,13 +1761,12 @@
     ctx.restore();
   }
 
-  const FP_HORIZON = 372;
-
   function viewButtonRect() {
     if (!player) return null;
     if (firstPerson) return { x: W - 156, y: H - 50, w: 140, h: 34 };
     const w = 96;
     const h = 32;
+    let x = player.x + 42;
     let y = player.y - 20;
     if (x + w > W - 8) x = player.x - 42 - w;
     x = Math.max(8, x);
@@ -1801,171 +1800,12 @@
     ctx.restore();
   }
 
-  function projectWorld(wx, wy) {
-    const depth = player.y - wy;
-    const lateral = wx - player.x;
-    const persp = 250 / (Math.max(12, depth) + 78);
-    return {
-      x: W / 2 + lateral * persp * 1.2,
-      y: FP_HORIZON + persp * 175,
-      scale: Math.max(0.16, Math.min(1.85, persp * 0.9)),
-      depth,
-    };
-  }
-
-  function withProjected(entity, drawFn) {
-    const p = projectWorld(entity.x, entity.y);
-    if (p.depth < -48 || p.depth > 1700) return;
-    ctx.save();
-    ctx.translate(p.x, p.y);
-    ctx.scale(p.scale, p.scale);
-    ctx.translate(-entity.x, -entity.y);
-    drawFn();
-    ctx.restore();
-  }
-
-  function paintEnemyWorld(e) {
-    if (e.kind === 'bigBoss') {
-      ctx.save();
-      ctx.fillStyle = '#ff335522';
-      ctx.beginPath();
-      ctx.arc(e.x, e.y, 58, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
-    if (e.kind === 'ground') drawGround(e);
-    else if (e.kind === 'aa') drawAa(e, false);
-    else if (e.kind === 'baozi') ship(e.x, e.y, PAL.baozi, e.flash, e.scale, true);
-    else if (e.kind === 'smallBoss') ship(e.x, e.y, PAL.small, e.flash, e.scale, true);
-    else ship(e.x, e.y, PAL.red, e.flash, e.scale || 1, true);
-    drawHp(e);
-    drawTag(e);
-  }
-
-  function paintAllyWorld(a) {
-    if (a.kind === 'bigBoss') {
-      ctx.save();
-      ctx.fillStyle = '#49b7ff22';
-      ctx.beginPath();
-      ctx.arc(a.x, a.y, 58, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
-    if (a.kind === 'ground') drawGround(a, true);
-    else if (a.kind === 'aa') drawAa(a, true);
-    else if (a.kind === 'smallBoss') ship(a.x, a.y, PAL.player, a.flash, a.scale, false);
-    else if (a.kind === 'bigBoss') ship(a.x, a.y, PAL.player, a.flash, a.scale, false);
-    else if (a.kind === 'wing') ship(a.x, a.y, PAL.yellowShip, a.flash, a.scale || ALLY_SHIP_SCALE, false);
-    else ship(a.x, a.y, PAL.player, a.flash, a.scale || 0.82, false);
-    drawHp(a);
-    drawAllyTag(a);
-  }
-
-  function drawFirstPerson(dt) {
-    ctx.fillStyle = '#050a17';
-    ctx.fillRect(0, 0, W, H);
-    const nebula = ctx.createRadialGradient(560, 150, 0, 560, 160, 280);
-    nebula.addColorStop(0, '#1a2d5c55');
-    nebula.addColorStop(0.6, '#12182e22');
-    nebula.addColorStop(1, '#050a1700');
-    ctx.fillStyle = nebula;
-    ctx.fillRect(0, 0, W, H);
-    const planet = ctx.createRadialGradient(150, 120, 8, 168, 138, 54);
-    planet.addColorStop(0, '#24344e');
-    planet.addColorStop(0.75, '#10182c');
-    planet.addColorStop(1, '#050a1700');
-    ctx.fillStyle = planet;
-    ctx.beginPath();
-    ctx.arc(158, 128, 52, 0, Math.PI * 2);
-    ctx.fill();
-
-    const parallax = (player.x - W / 2) * 0.12;
-    for (const s of stars) {
-      if (mode !== 'paused') s.y = (s.y + s.speed * dt) % H;
-      const x = ((s.x - parallax) % W + W) % W;
-      ctx.globalAlpha = s.a;
-      ctx.fillStyle = s.r > 1.2 ? '#f4f7ff' : '#b9cff5';
-      ctx.beginPath();
-      ctx.arc(x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fill();
-      if (s.r > 1.4) {
-        ctx.fillRect(x - 3, s.y - 0.3, 6, 0.6);
-        ctx.fillRect(x - 0.3, s.y - 3, 0.6, 6);
-      }
-    }
-    ctx.globalAlpha = 1;
-
-    const marks = [];
-    for (const e of enemies) {
-      if (!e.dead) marks.push({ depth: player.y - e.y, draw: () => withProjected(e, () => paintEnemyWorld(e)) });
-    }
-    for (const a of allies) {
-      if (!a.dead) marks.push({ depth: player.y - a.y, draw: () => withProjected(a, () => paintAllyWorld(a)) });
-    }
-    for (const it of items) marks.push({ depth: player.y - it.y, draw: () => withProjected(it, () => drawItem(it)) });
-    for (const b of lasers) marks.push({ depth: player.y - b.y, draw: () => withProjected(b, () => drawLaser(b)) });
-    for (const p of particles) marks.push({ depth: player.y - p.y, draw: () => withProjected(p, () => {
-      const fade = Math.max(0, p.life / p.max);
-      ctx.globalAlpha = fade;
-      if (p.kind === 'ring') {
-        ctx.strokeStyle = p.color;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.stroke();
-      } else if (p.kind === 'flash') {
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fill();
-      } else {
-        ctx.fillStyle = p.color;
-        ctx.fillRect(p.x, p.y, p.w || 2.5, p.w || 2.5);
-      }
-      ctx.globalAlpha = 1;
-    }) });
-    marks.sort((a, b) => b.depth - a.depth);
-    for (const m of marks) m.draw();
-
-    ctx.save();
-    ctx.translate(W / 2, H - 78);
-    if (flame > 0) {
-      ctx.save();
-      ctx.translate(0, -8);
-      const flick = Math.sin(elapsed * 28) * 14;
-      const grad = ctx.createLinearGradient(0, 0, 0, -280);
-      grad.addColorStop(0, 'rgba(255,250,230,0.95)');
-      grad.addColorStop(0.2, 'rgba(255,186,60,0.8)');
-      grad.addColorStop(0.55, 'rgba(255,78,24,0.35)');
-      grad.addColorStop(1, 'rgba(255,40,0,0)');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.moveTo(-18, 0);
-      ctx.quadraticCurveTo(-120 - flick, -120, -10, -250);
-      ctx.quadraticCurveTo(0, -275, 10, -250);
-      ctx.quadraticCurveTo(120 + flick, -110, 18, 0);
-      ctx.fill();
-      ctx.restore();
-    }
-    ctx.restore();
-    ship(W / 2, H - 36, PAL.player, hitFlash, 1.35, false);
-  }
-
   function draw(dt) {
     const jx = shake > 0.2 ? (Math.random() - 0.5) * shake : 0;
     const jy = shake > 0.2 ? (Math.random() - 0.5) * shake : 0;
     ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, jx * canvas.width / W, jy * canvas.height / H);
     ctx.fillStyle = '#050a17';
     ctx.fillRect(0, 0, W, H);
-    if (firstPerson && player && mode !== 'ready') {
-      drawFirstPerson(dt);
-      if (hitFlash > 0) {
-        ctx.fillStyle = `rgba(255,70,100,${hitFlash * 0.6})`;
-        ctx.fillRect(0, 0, W, H);
-      }
-      drawViewButton();
-      return;
-    }
     const nebula = ctx.createRadialGradient(W * 0.7, H * 0.33, 0, W * 0.7, H * 0.33, 420);
     nebula.addColorStop(0, '#14234b55');
     nebula.addColorStop(0.5, '#13172e33');
