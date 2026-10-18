@@ -252,7 +252,7 @@
     const final = itemCounts(ITEM_PLANS.final);
     $('intel-note').textContent = '普通飞机为红色，3 点生命，每 2 秒发射激光，命中扣 1 血。地面炮台与飞机同时出现。';
     $('level-list').innerHTML = LEVELS.map(lv => `<li>${describeLevel(lv)}</li>`).join('');
-    $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、绿 ${normal.green}、红 ${normal.red}、洋葱 ${normal.onion}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、绿 ${final.green}、红 ${final.red}、洋葱 ${final.onion}。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架小型黄色飞机，以及 ${ALLY_GROUND_COUNT} 支我方地面部队；地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。洋葱球：再获得 ${ONION_BOMBS} 颗自己投出的炸弹。开局 ${START_BOMBS} 颗追踪炸弹，鼠标左键点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。极光 ${AURORA_COUNT} 发，鼠标右键发射一枚，打中扣 ${AURORA_DMG} 血。`;
+    $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、绿 ${normal.green}、红 ${normal.red}、洋葱 ${normal.onion}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、绿 ${final.green}、红 ${final.red}、洋葱 ${final.onion}。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架小型黄色飞机，以及 ${ALLY_GROUND_COUNT} 支我方地面部队；地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。洋葱球：再获得 ${ONION_BOMBS} 颗自己投出的炸弹。开局 ${START_BOMBS} 颗追踪炸弹，鼠标左键点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。中子弹每关 ${AURORA_COUNT} 发，鼠标右键射出极光，不是激光，打中扣 ${AURORA_DMG} 血。`;
   }
 
   function describeLevel(lv) {
@@ -430,6 +430,7 @@
     $('pause').disabled = false;
     $('pause').textContent = 'Ⅱ';
     $('pause').setAttribute('aria-label', '暂停游戏');
+    auroraStock = AURORA_COUNT;
     syncHUD();
     showBanner(bannerText(lv));
     tone(550, 0.25);
@@ -1441,25 +1442,41 @@
     const uy = b.vy / len;
     const px = -uy;
     const py = ux;
-    const tail = 52;
+    const length = 86;
     ctx.save();
-    ctx.lineCap = 'round';
-    const bands = [['#7a4dff', 16, 0.32], ['#3dffb5', 8, 0.62], ['#f4fff8', 2.6, 1]];
-    for (const [color, width, alpha] of bands) {
+    const sheets = [
+      ['#6a3dff', 0.34, -18],
+      ['#39f5a2', 0.4, -6],
+      ['#7af7ff', 0.36, 6],
+      ['#f0b6ff', 0.32, 16],
+    ];
+    for (const [color, alpha, shift] of sheets) {
+      ctx.fillStyle = color;
       ctx.globalAlpha = alpha;
-      ctx.strokeStyle = color;
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 18;
-      ctx.lineWidth = width;
       ctx.beginPath();
-      ctx.moveTo(b.x, b.y);
-      for (let i = 1; i <= 6; i++) {
-        const t = i / 6;
-        const wave = Math.sin(elapsed * 22 + t * 9 + b.y * 0.05) * 4.2;
-        ctx.lineTo(b.x - ux * tail * t + px * wave, b.y - uy * tail * t + py * wave);
+      for (let i = 0; i <= 12; i++) {
+        const t = i / 12;
+        const wave = Math.sin(elapsed * 2.4 + t * 7 + shift) * 8;
+        const x = b.x - ux * length * t + px * (shift + wave);
+        const y = b.y - uy * length * t + py * (shift + wave);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
       }
-      ctx.stroke();
+      for (let i = 12; i >= 0; i--) {
+        const t = i / 12;
+        const wave = Math.sin(elapsed * 2.4 + t * 7 + shift) * 8;
+        const x = b.x - ux * length * t + px * (shift + wave + 11);
+        const y = b.y - uy * length * t + py * (shift + wave + 11);
+        ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fill();
     }
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = '#f7fff8';
+    ctx.beginPath();
+    ctx.ellipse(b.x, b.y, 10, 16, 0, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
   }
 
