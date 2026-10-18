@@ -1862,66 +1862,41 @@
   }
 
   function drawFirstPerson(dt) {
-    const sky = ctx.createLinearGradient(0, 0, 0, H);
-    sky.addColorStop(0, '#02040e');
-    sky.addColorStop(0.42, '#0a1830');
-    sky.addColorStop(0.62, '#16325c');
-    sky.addColorStop(0.78, '#0c1c34');
-    sky.addColorStop(1, '#070d16');
-    ctx.fillStyle = sky;
+    ctx.fillStyle = '#050814';
+    ctx.fillRect(0, 0, W, H);
+    const voidGlow = ctx.createRadialGradient(W * 0.5, H * 0.46, 40, W * 0.5, H * 0.55, 520);
+    voidGlow.addColorStop(0, '#121c38');
+    voidGlow.addColorStop(0.55, '#0a1022');
+    voidGlow.addColorStop(1, '#050814');
+    ctx.fillStyle = voidGlow;
+    ctx.fillRect(0, 0, W, H);
+    const nebula = ctx.createRadialGradient(W * 0.78, H * 0.82, 0, W * 0.78, H * 0.82, 340);
+    nebula.addColorStop(0, '#24366e55');
+    nebula.addColorStop(0.5, '#1a184044');
+    nebula.addColorStop(1, '#05081400');
+    ctx.fillStyle = nebula;
+    ctx.fillRect(0, 0, W, H);
+    const dust = ctx.createRadialGradient(120, H * 0.72, 0, 140, H * 0.78, 280);
+    dust.addColorStop(0, '#3a206044');
+    dust.addColorStop(1, '#05081400');
+    ctx.fillStyle = dust;
     ctx.fillRect(0, 0, W, H);
 
-    ctx.save();
-    ctx.translate(W / 2, FP_HORIZON);
+    const parallax = (player.x - W / 2) * 0.12;
     for (const s of stars) {
       if (mode !== 'paused') s.y = (s.y + s.speed * dt) % H;
-      const sy = (s.y / H - 0.62) * 560;
-      const parallax = (player.x - W / 2) * 0.35;
+      const x = ((s.x - parallax) % W + W) % W;
       ctx.globalAlpha = s.a;
-      ctx.fillStyle = '#d5e6ff';
+      ctx.fillStyle = s.r > 1.2 ? '#f4f7ff' : '#b9cff5';
       ctx.beginPath();
-      ctx.arc(s.x - W / 2 - parallax, sy, s.r, 0, Math.PI * 2);
+      ctx.arc(x, s.y, s.r, 0, Math.PI * 2);
       ctx.fill();
+      if (s.r > 1.4) {
+        ctx.fillRect(x - 3, s.y - 0.3, 6, 0.6);
+        ctx.fillRect(x - 0.3, s.y - 3, 0.6, 6);
+      }
     }
     ctx.globalAlpha = 1;
-    const ground = ctx.createLinearGradient(0, 0, 0, 520);
-    ground.addColorStop(0, '#24507f');
-    ground.addColorStop(0.28, '#14304f');
-    ground.addColorStop(1, '#070d18');
-    ctx.fillStyle = ground;
-    ctx.beginPath();
-    ctx.moveTo(-78, 1);
-    ctx.lineTo(78, 1);
-    ctx.lineTo(1040, 580);
-    ctx.lineTo(-1040, 580);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(158, 196, 255, 0.28)';
-    ctx.lineWidth = 1;
-    const lane = ((player.x % 70) + 70) % 70;
-    for (let i = -10; i <= 10; i++) {
-      const x0 = i * 70 - lane;
-      ctx.beginPath();
-      ctx.moveTo(x0 * 0.16, 0);
-      ctx.lineTo(x0 * 3.6, 580);
-      ctx.stroke();
-    }
-    const march = (((-player.y) % 64) + 64) % 64;
-    for (let i = 0; i < 8; i++) {
-      const y = 18 + ((i * 64 + march) % 512);
-      const half = 78 + y * 1.65;
-      ctx.beginPath();
-      ctx.moveTo(-half, y);
-      ctx.lineTo(half, y);
-      ctx.stroke();
-    }
-    ctx.strokeStyle = '#d5e8ff';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(-980, 0);
-    ctx.lineTo(980, 0);
-    ctx.stroke();
-    ctx.restore();
 
     const marks = [];
     for (const e of enemies) {
