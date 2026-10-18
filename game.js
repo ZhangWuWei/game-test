@@ -984,7 +984,7 @@
       });
       muzzleFlash(player.x, player.y - 28, bolt ? '#e9f8ff' : '#9af6ff');
       if (!bolt) {
-        particles.push({ kind: 'ring', x: player.x, y: player.y - 28, vx: 0, vy: 0, life: 0.16, max: 0.16, color: '#bffbff', r: 3, grow: 110 });
+        particles.push({ kind: 'ring', x: player.x, y: player.y - 28, vx: 0, vy: 0, life: 0.12, max: 0.12, color: '#bffbff', r: 2, grow: 46 });
       }
       if (bolt) tone(980, 0.05, 'square', 0.016);
       else sfxPlayerShot();
@@ -1045,18 +1045,18 @@
       }
       b.x += b.vx * dt;
       b.y += b.vy * dt;
-      if (b.playerShot && !b.dead && Math.random() < 0.85) {
+      if (b.playerShot && !b.dead && Math.random() < 0.45) {
         const len = Math.hypot(b.vx, b.vy) || 1;
         particles.push({
           kind: 'spark',
-          x: b.x - b.vx / len * (8 + Math.random() * 18),
-          y: b.y - b.vy / len * (8 + Math.random() * 18),
-          vx: (Math.random() - 0.5) * 36,
-          vy: 18 + Math.random() * 28,
-          life: 0.18 + Math.random() * 0.12,
-          max: 0.3,
+          x: b.x - b.vx / len * (4 + Math.random() * 8),
+          y: b.y - b.vy / len * (4 + Math.random() * 8),
+          vx: (Math.random() - 0.5) * 16,
+          vy: 8 + Math.random() * 12,
+          life: 0.1 + Math.random() * 0.08,
+          max: 0.18,
           color: Math.random() < 0.5 ? '#9af6ff' : '#d7c6ff',
-          w: Math.random() < 0.35 ? 3.4 : 1.8,
+          w: 1.3,
         });
       }
       if (b.bomb && !b.mortar && !b.dead && Math.random() < 0.55) {
@@ -1369,17 +1369,17 @@
     const uy = b.vy / len;
     const px = -uy;
     const py = ux;
-    const tail = 62;
+    const tail = 24;
     const tx = b.x - ux * tail;
     const ty = b.y - uy * tail;
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.globalAlpha = 0.28;
+    ctx.globalAlpha = 0.35;
     ctx.strokeStyle = '#35f0ff';
     ctx.shadowColor = '#35f0ff';
-    ctx.shadowBlur = 22;
-    ctx.lineWidth = 16;
+    ctx.shadowBlur = 8;
+    ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.moveTo(b.x, b.y);
     ctx.lineTo(tx, ty);
@@ -1387,12 +1387,12 @@
     ctx.globalAlpha = 0.55;
     ctx.strokeStyle = '#c9b6ff';
     ctx.shadowColor = '#b388ff';
-    ctx.lineWidth = 2.2;
-    ctx.shadowBlur = 12;
+    ctx.lineWidth = 1.1;
+    ctx.shadowBlur = 6;
     ctx.beginPath();
-    for (let i = 0; i <= 8; i++) {
-      const t = i / 8;
-      const wave = Math.sin(elapsed * 30 + t * 12) * 6;
+    for (let i = 0; i <= 6; i++) {
+      const t = i / 6;
+      const wave = Math.sin(elapsed * 30 + t * 12) * 2.2;
       const x = b.x - ux * tail * t + px * wave;
       const y = b.y - uy * tail * t + py * wave;
       if (i === 0) ctx.moveTo(x, y);
@@ -1402,9 +1402,9 @@
     ctx.strokeStyle = '#7ef6ff';
     ctx.shadowColor = '#7ef6ff';
     ctx.beginPath();
-    for (let i = 0; i <= 8; i++) {
-      const t = i / 8;
-      const wave = Math.sin(elapsed * 30 + t * 12 + Math.PI) * 6;
+    for (let i = 0; i <= 6; i++) {
+      const t = i / 6;
+      const wave = Math.sin(elapsed * 30 + t * 12 + Math.PI) * 2.2;
       const x = b.x - ux * tail * t + px * wave;
       const y = b.y - uy * tail * t + py * wave;
       if (i === 0) ctx.moveTo(x, y);
@@ -1414,30 +1414,30 @@
     ctx.globalAlpha = 1;
     ctx.strokeStyle = '#ffffff';
     ctx.shadowColor = '#e9ffff';
-    ctx.shadowBlur = 8;
-    ctx.lineWidth = 2.4;
+    ctx.shadowBlur = 4;
+    ctx.lineWidth = 1.2;
     ctx.beginPath();
     ctx.moveTo(b.x, b.y);
     ctx.lineTo(tx, ty);
     ctx.stroke();
-    const pulse = 4 + Math.sin(elapsed * 24) * 1.2;
+    const pulse = 1.6 + Math.sin(elapsed * 24) * 0.4;
     ctx.strokeStyle = '#bffbff';
-    ctx.lineWidth = 1.4;
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.arc(b.x, b.y, pulse + 3, 0, Math.PI * 2);
+    ctx.arc(b.x, b.y, pulse + 1.4, 0, Math.PI * 2);
     ctx.stroke();
     ctx.fillStyle = '#ffffff';
-    ctx.shadowBlur = 16;
+    ctx.shadowBlur = 6;
     ctx.beginPath();
-    ctx.arc(b.x, b.y, 3.1, 0, Math.PI * 2);
+    ctx.arc(b.x, b.y, 1.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1.6;
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(b.x - 7, b.y);
-    ctx.lineTo(b.x + 7, b.y);
-    ctx.moveTo(b.x, b.y - 7);
-    ctx.lineTo(b.x, b.y + 7);
+    ctx.moveTo(b.x - 3, b.y);
+    ctx.lineTo(b.x + 3, b.y);
+    ctx.moveTo(b.x, b.y - 3);
+    ctx.lineTo(b.x, b.y + 3);
     ctx.stroke();
     ctx.restore();
   }
