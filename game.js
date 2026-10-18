@@ -1800,6 +1800,109 @@
     ctx.restore();
   }
 
+  const FP_HORIZON = 250;
+
+  function projectWorld(wx, wy) {
+    const depth = player.y - wy;
+    const lateral = wx - player.x;
+    const persp = 220 / (Math.max(16, depth) + 90);
+    return {
+      x: W / 2 + lateral * persp * 1.15,
+      y: FP_HORIZON + persp * 150,
+      scale: Math.max(0.28, Math.min(1.7, persp * 0.95)),
+      depth,
+    };
+  }
+
+  function withProjected(entity, drawFn) {
+    const p = projectWorld(entity.x, entity.y);
+    if (p.depth < -20 || p.depth > 1500) return;
+    if (p.y > H - 120) return;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.scale(p.scale, p.scale);
+    ctx.translate(-entity.x, -entity.y);
+    drawFn();
+    ctx.restore();
+  }
+
+  function paintEnemyWorld(e) {
+    if (e.kind === 'bigBoss') {
+      ctx.save();
+      ctx.fillStyle = '#ff335522';
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, 58, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    if (e.kind === 'ground') drawGround(e);
+    else if (e.kind === 'aa') drawAa(e, false);
+    else if (e.kind === 'baozi') ship(e.x, e.y, PAL.baozi, e.flash, e.scale, true);
+    else if (e.kind === 'smallBoss') ship(e.x, e.y, PAL.small, e.flash, e.scale, true);
+    else ship(e.x, e.y, PAL.red, e.flash, e.scale || 1, true);
+    drawHp(e);
+    drawTag(e);
+  }
+
+  function paintAllyWorld(a) {
+    if (a.kind === 'bigBoss') {
+      ctx.save();
+      ctx.fillStyle = '#49b7ff22';
+      ctx.beginPath();
+      ctx.arc(a.x, a.y, 58, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    if (a.kind === 'ground') drawGround(a, true);
+    else if (a.kind === 'aa') drawAa(a, true);
+    else if (a.kind === 'smallBoss') ship(a.x, a.y, PAL.player, a.flash, a.scale, false);
+    else if (a.kind === 'bigBoss') ship(a.x, a.y, PAL.player, a.flash, a.scale, false);
+    else if (a.kind === 'wing') ship(a.x, a.y, PAL.yellowShip, a.flash, a.scale || ALLY_SHIP_SCALE, false);
+    else ship(a.x, a.y, PAL.player, a.flash, a.scale || 0.82, false);
+    drawHp(a);
+    drawAllyTag(a);
+  }
+
+  function drawFirstPerson() {
+    const marks = [];
+    for (const e of enemies) {
+      if (!e.dead) marks.push({ depth: player.y - e.y, draw: () => withProjected(e, () => paintEnemyWorld(e)) });
+    }
+    for (const a of allies) {
+      if (!a.dead) marks.push({ depth: player.y - a.y, draw: () => withProjected(a, () => paintAllyWorld(a)) });
+    }
+    for (const it of items) marks.push({ depth: player.y - it.y, draw: () => withProjected(it, () => drawItem(it)) });
+    for (const b of lasers) marks.push({ depth: player.y - b.y, draw: () => withProjected(b, () => drawLaser(b)) });
+    marks.sort((a, b) => b.depth - a.depth);
+    for (const m of marks) m.draw();
+
+    if (flame > 0) {
+      ctx.save();
+      ctx.translate(W / 2, H - 168);
+      const flick = Math.sin(elapsed * 28) * 12;
+      const grad = ctx.createLinearGradient(0, 20, 0, -220);
+      grad.addColorStop(0, 'rgba(255,250,230,0.95)');
+      grad.addColorStop(0.25, 'rgba(255,186,60,0.75)');
+      grad.addColorStop(0.6, 'rgba(255,78,24,0.28)');
+      grad.addColorStop(1, 'rgba(255,40,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(-16, 18);
+      ctx.quadraticCurveTo(-90 - flick, -80, -8, -190);
+      ctx.quadraticCurveTo(0, -210, 8, -190);
+      ctx.quadraticCurveTo(90 + flick, -70, 16, 18);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.save();
+    ctx.fillStyle = 'rgba(90, 170, 255, 0.18)';
+    ctx.beginPath();
+    ctx.ellipse(W / 2, H - 108, 54, 18, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    ship(W / 2, H - 108, PAL.player, hitFlash, 1.65, false);
+  }
+
   function draw(dt) {
     const jx = shake > 0.2 ? (Math.random() - 0.5) * shake : 0;
     const jy = shake > 0.2 ? (Math.random() - 0.5) * shake : 0;
@@ -1843,6 +1946,36 @@
     ctx.beginPath();
     ctx.arc(685, 160, 81, 0, Math.PI * 2);
     ctx.fill();
+
+    if (firstPerson && player && mode !== 'ready') {
+      drawFirstPerson();
+      for (const p of particles) {
+        const fade = Math.max(0, p.life / p.max);
+        ctx.globalAlpha = fade;
+        if (p.kind === 'ring') {
+          ctx.strokeStyle = p.color;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.stroke();
+        } else if (p.kind === 'flash') {
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillStyle = p.color;
+          ctx.fillRect(p.x, p.y, p.w || 2.5, p.w || 2.5);
+        }
+      }
+      ctx.globalAlpha = 1;
+      if (hitFlash > 0) {
+        ctx.fillStyle = `rgba(255,70,100,${hitFlash * 0.6})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+      drawViewButton();
+      return;
+    }
 
     ctx.fillStyle = baseFlash > 0 ? 'rgba(255,72,96,0.16)' : 'rgba(90,140,220,0.10)';
     ctx.fillRect(0, BASE_LINE, W, H - BASE_LINE);
