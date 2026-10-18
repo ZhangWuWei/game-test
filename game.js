@@ -29,8 +29,8 @@
   ];
   // 每关道具构成原话没拆比例：一般 5 个、最后一关 12 个。三种球都要出现。
   const ITEM_PLANS = {
-    normal: ['blue', 'yellow', 'green', 'red', 'onion', 'pink', 'white'],
-    final: ['blue', 'yellow', 'green', 'red', 'onion', 'pink', 'white', 'blue', 'yellow', 'green', 'red', 'onion', 'pink', 'blue', 'onion'],
+    normal: ['blue', 'yellow', 'white', 'green', 'red', 'onion', 'pink'],
+    final: ['blue', 'yellow', 'white', 'green', 'red', 'onion', 'pink', 'blue', 'yellow', 'green', 'red', 'onion', 'pink', 'blue', 'onion'],
   };
   const LIGHTNING_TIME = 15;
   const LIGHTNING_DMG = 3;
