@@ -107,8 +107,6 @@
   let flame = 0;
   let flameSerial = 0;
   let firstPerson = false;
-  let shipBank = 0;
-  let shipLeanX = W / 2;
   let viewPress = false;
   let bombStock = START_BOMBS;
   let auroraStock = AURORA_COUNT;
@@ -470,8 +468,6 @@
     baseFlash = 0;
     player = { x: W / 2, y: H - 95, hp: PLAYER_MAX };
     firstPerson = false;
-    shipBank = 0;
-    shipLeanX = player.x;
     beginWave();
   }
 
@@ -1107,9 +1103,6 @@
     }
     player.x = Math.max(24, Math.min(W - 24, player.x));
     player.y = Math.max(40, Math.min(H - 38, player.y));
-    const lean = Math.max(-0.62, Math.min(0.62, (player.x - shipLeanX) * 0.04));
-    shipLeanX += (player.x - shipLeanX) * Math.min(1, dt * 3.2);
-    shipBank += (lean - shipBank) * Math.min(1, dt * 8);
 
     if (lightning > 0) {
       lightning = Math.max(0, lightning - dt);
@@ -1301,11 +1294,10 @@
     if (mode === 'playing' && quotaMet()) levelClear();
   }
 
-  function ship(x, y, pal, flash, scale, faceDown, bank = 0) {
+  function ship(x, y, pal, flash, scale, faceDown) {
     ctx.save();
     ctx.translate(x, y);
     if (faceDown) ctx.rotate(Math.PI);
-    if (bank) ctx.rotate(bank);
     ctx.scale(scale, scale);
     ctx.shadowColor = pal.glow;
     ctx.shadowBlur = 15;
@@ -1753,7 +1745,6 @@
   function drawFlame() {
     ctx.save();
     ctx.translate(player.x, player.y - 24);
-    ctx.rotate(shipBank);
     const flick = Math.sin(elapsed * 28) * 10;
     const grad = ctx.createLinearGradient(0, 0, 0, -196);
     grad.addColorStop(0, 'rgba(255,250,230,0.95)');
@@ -1775,7 +1766,7 @@
   function viewButtonRect() {
     const w = 96;
     const h = 32;
-    if (firstPerson || !player) return { x: W - w - 16, y: H - h - 16, w, h };
+    if (firstPerson || !player) return null;
     let x = player.x + 42;
     let y = player.y - 20;
     if (x + w > W - 8) x = player.x - 42 - w;
@@ -1786,12 +1777,14 @@
 
   function hitViewButton(p) {
     const r = viewButtonRect();
+    if (!r) return false;
     return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
   }
 
   function drawViewButton() {
-    if (!player || mode === 'ready' || mode === 'over' || mode === 'victory' || mode === 'levelclear') return;
+    if (firstPerson || !player || mode === 'ready' || mode === 'over' || mode === 'victory' || mode === 'levelclear') return;
     const r = viewButtonRect();
+    if (!r) return;
     ctx.save();
     ctx.fillStyle = firstPerson ? 'rgba(16, 48, 88, 0.94)' : 'rgba(8, 20, 40, 0.9)';
     ctx.strokeStyle = '#9fd4ff';
@@ -1804,7 +1797,7 @@
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#e7f6ff';
-    ctx.fillText(firstPerson ? '返回俯视' : '第一视角', r.x + r.w / 2, r.y + r.h / 2 + 0.5);
+    ctx.fillText('第一视角', r.x + r.w / 2, r.y + r.h / 2 + 0.5);
     ctx.restore();
   }
 
@@ -1983,14 +1976,7 @@
       ctx.restore();
     }
     ctx.restore();
-    ship(W / 2, H + 58, PAL.player, hitFlash, 2.15, false, 0);
-
-    ctx.save();
-    ctx.font = '14px "Noto Sans SC", sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillStyle = '#d7e9ff';
-    ctx.fillText('第一视角', 18, 28);
-    ctx.restore();
+    ship(W / 2, H + 58, PAL.player, hitFlash, 2.15, false);
   }
 
   function draw(dt) {
@@ -2114,7 +2100,7 @@
           ctx.fillText('已选中', player.x, player.y - 40);
           ctx.restore();
         }
-        ship(player.x, player.y, PAL.player, hitFlash, 1, false, shipBank);
+        ship(player.x, player.y, PAL.player, hitFlash, 1, false);
         if (flame > 0) drawFlame();
       }
       for (const b of lasers) drawLaser(b);
@@ -2230,8 +2216,8 @@
   function beginPush(e) {
     if (!player || (e.pointerType === 'mouse' && e.button !== 0) || onUiControl(e) || !overArena(e)) return;
     const p = locate(e);
-    if ((mode === 'playing' || mode === 'paused') && hitViewButton(p)) {
-      firstPerson = !firstPerson;
+    if (!firstPerson && (mode === 'playing' || mode === 'paused') && hitViewButton(p)) {
+      firstPerson = true;
       viewPress = true;
       e.preventDefault();
       return;
