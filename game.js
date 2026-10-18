@@ -1764,10 +1764,10 @@
   const FP_HORIZON = 372;
 
   function viewButtonRect() {
+    if (!player) return null;
+    if (firstPerson) return { x: W - 156, y: H - 50, w: 140, h: 34 };
     const w = 96;
     const h = 32;
-    if (firstPerson || !player) return null;
-    let x = player.x + 42;
     let y = player.y - 20;
     if (x + w > W - 8) x = player.x - 42 - w;
     x = Math.max(8, x);
@@ -1782,22 +1782,22 @@
   }
 
   function drawViewButton() {
-    if (firstPerson || !player || mode === 'ready' || mode === 'over' || mode === 'victory' || mode === 'levelclear') return;
+    if (!player || mode === 'ready' || mode === 'over' || mode === 'victory' || mode === 'levelclear') return;
     const r = viewButtonRect();
     if (!r) return;
     ctx.save();
-    ctx.fillStyle = firstPerson ? 'rgba(16, 48, 88, 0.94)' : 'rgba(8, 20, 40, 0.9)';
+    ctx.fillStyle = 'rgba(8, 20, 40, 0.92)';
     ctx.strokeStyle = '#9fd4ff';
     ctx.lineWidth = 1.6;
     ctx.beginPath();
     ctx.rect(r.x, r.y, r.w, r.h);
     ctx.fill();
     ctx.stroke();
-    ctx.font = '15px "Noto Sans SC", sans-serif';
+    ctx.font = '14px "Noto Sans SC", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#e7f6ff';
-    ctx.fillText('第一视角', r.x + r.w / 2, r.y + r.h / 2 + 0.5);
+    ctx.fillText(firstPerson ? '退出第一视角' : '第一视角', r.x + r.w / 2, r.y + r.h / 2 + 0.5);
     ctx.restore();
   }
 
@@ -1862,25 +1862,22 @@
   }
 
   function drawFirstPerson(dt) {
-    ctx.fillStyle = '#050814';
+    ctx.fillStyle = '#050a17';
     ctx.fillRect(0, 0, W, H);
-    const voidGlow = ctx.createRadialGradient(W * 0.5, H * 0.46, 40, W * 0.5, H * 0.55, 520);
-    voidGlow.addColorStop(0, '#121c38');
-    voidGlow.addColorStop(0.55, '#0a1022');
-    voidGlow.addColorStop(1, '#050814');
-    ctx.fillStyle = voidGlow;
-    ctx.fillRect(0, 0, W, H);
-    const nebula = ctx.createRadialGradient(W * 0.78, H * 0.82, 0, W * 0.78, H * 0.82, 340);
-    nebula.addColorStop(0, '#24366e55');
-    nebula.addColorStop(0.5, '#1a184044');
-    nebula.addColorStop(1, '#05081400');
+    const nebula = ctx.createRadialGradient(560, 150, 0, 560, 160, 280);
+    nebula.addColorStop(0, '#1a2d5c55');
+    nebula.addColorStop(0.6, '#12182e22');
+    nebula.addColorStop(1, '#050a1700');
     ctx.fillStyle = nebula;
     ctx.fillRect(0, 0, W, H);
-    const dust = ctx.createRadialGradient(120, H * 0.72, 0, 140, H * 0.78, 280);
-    dust.addColorStop(0, '#3a206044');
-    dust.addColorStop(1, '#05081400');
-    ctx.fillStyle = dust;
-    ctx.fillRect(0, 0, W, H);
+    const planet = ctx.createRadialGradient(150, 120, 8, 168, 138, 54);
+    planet.addColorStop(0, '#24344e');
+    planet.addColorStop(0.75, '#10182c');
+    planet.addColorStop(1, '#050a1700');
+    ctx.fillStyle = planet;
+    ctx.beginPath();
+    ctx.arc(158, 128, 52, 0, Math.PI * 2);
+    ctx.fill();
 
     const parallax = (player.x - W / 2) * 0.12;
     for (const s of stars) {
@@ -1931,10 +1928,10 @@
     for (const m of marks) m.draw();
 
     ctx.save();
-    ctx.translate(W / 2, H + 46);
+    ctx.translate(W / 2, H - 78);
     if (flame > 0) {
       ctx.save();
-      ctx.translate(0, -78);
+      ctx.translate(0, -8);
       const flick = Math.sin(elapsed * 28) * 14;
       const grad = ctx.createLinearGradient(0, 0, 0, -280);
       grad.addColorStop(0, 'rgba(255,250,230,0.95)');
@@ -1951,7 +1948,7 @@
       ctx.restore();
     }
     ctx.restore();
-    ship(W / 2, H + 58, PAL.player, hitFlash, 2.15, false);
+    ship(W / 2, H - 36, PAL.player, hitFlash, 1.35, false);
   }
 
   function draw(dt) {
@@ -2191,8 +2188,8 @@
   function beginPush(e) {
     if (!player || (e.pointerType === 'mouse' && e.button !== 0) || onUiControl(e) || !overArena(e)) return;
     const p = locate(e);
-    if (!firstPerson && (mode === 'playing' || mode === 'paused') && hitViewButton(p)) {
-      firstPerson = true;
+    if ((mode === 'playing' || mode === 'paused') && hitViewButton(p)) {
+      firstPerson = !firstPerson;
       viewPress = true;
       e.preventDefault();
       return;
