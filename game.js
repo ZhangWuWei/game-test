@@ -353,7 +353,6 @@
       phase: Math.random() * Math.PI * 2,
       flash: 0,
       scale: spec ? spec.scale : 1,
-      ramCd: 0,
       dead: false,
     }, extra);
   }
@@ -647,7 +646,6 @@
 
   function moveCraft(e, dt) {
     e.flash = Math.max(0, e.flash - dt);
-    e.ramCd = Math.max(0, e.ramCd - dt);
     if (e.kind === 'plane') {
       e.y += (e.speed + Math.min(elapsed * 0.25, 26)) * dt;
       e.x += Math.sin(elapsed * 1.3 + e.phase) * 23 * dt;
@@ -1128,24 +1126,6 @@
     }
 
     watchBase();
-
-    if (mode === 'playing') {
-      for (const e of enemies) {
-        if (e.dead || e.ramCd > 0) continue;
-        const r = hitRadius(e);
-        if (Math.abs(e.x - player.x) < r.x + 6 && Math.abs(e.y - player.y) < r.y + 8) {
-          e.ramCd = 0.7;
-          if (e.kind === 'plane' || e.kind === 'ground') destroyEnemy(e);
-          else {
-            e.hp--;
-            e.flash = 0.1;
-            if (e.hp <= 0) destroyEnemy(e);
-          }
-          damage(1);
-          if (mode !== 'playing') break;
-        }
-      }
-    }
 
     allies = allies.filter(a => !a.dead && a.hp > 0);
     enemies = enemies.filter(e => {
