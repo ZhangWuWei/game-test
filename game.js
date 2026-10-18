@@ -62,6 +62,7 @@
   let moveTarget = null;
   let shipSelected = false;
   let gesture = null;
+  let dragging = false;
   let hitFlash = 0;
   let levelIndex = 0;
   let killedPlanes = 0;
@@ -741,7 +742,10 @@
     let mx = (keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0);
     let my = (keys.has('s') || keys.has('arrowdown') ? 1 : 0) - (keys.has('w') || keys.has('arrowup') ? 1 : 0);
     const usingKeys = mx !== 0 || my !== 0;
-    if (usingKeys) {
+    if (dragging && gesture?.moved && moveTarget) {
+      player.x = moveTarget.x;
+      player.y = moveTarget.y;
+    } else if (usingKeys) {
       const len = Math.hypot(mx, my) || 1;
       player.x += mx / len * 300 * dt;
       player.y += my / len * 300 * dt;
@@ -1292,40 +1296,49 @@
     const r = canvas.getBoundingClientRect();
     return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
   }
+  function placePlayer(p) {
+    player.x = Math.max(24, Math.min(W - 24, p.x));
+    player.y = Math.max(40, Math.min(H - 38, p.y));
+    moveTarget = { x: player.x, y: player.y };
+  }
   function nearPlayer(p) {
     return !!player && Math.hypot(p.x - player.x, p.y - player.y) < 46;
   }
   canvas.addEventListener('pointerdown', e => {
     if (mode !== 'playing' || !player) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     const p = locate(e);
-    gesture = { x: p.x, y: p.y, moved: false };
+    dragging = true;
+    shipSelected = true;
+    gesture = { x: p.x, y: p.y, moved: false, pointerId: e.pointerId };
+    try { canvas.setPointerCapture(e.pointerId); } catch {}
     e.preventDefault();
   });
   canvas.addEventListener('pointermove', e => {
     if (mode !== 'playing' || !player) return;
     const p = locate(e);
-    if (gesture) {
-      if (Math.hypot(p.x - gesture.x, p.y - gesture.y) > 8) gesture.moved = true;
-      if (shipSelected && gesture.moved) moveTarget = p;
+    if (dragging && gesture) {
+      if (Math.hypot(p.x - gesture.x, p.y - gesture.y) > 3) gesture.moved = true;
+      if (gesture.moved) placePlayer(p);
       return;
     }
-    if (shipSelected && e.pointerType === 'mouse') moveTarget = p;
+    if (shipSelected && e.pointerType === 'mouse' && !e.buttons) moveTarget = p;
   });
   function finishGesture(e) {
     if (!gesture || mode !== 'playing' || !player) {
+      dragging = false;
       gesture = null;
       return;
     }
     const p = locate(e);
-    const tap = !gesture.moved && Math.hypot(p.x - gesture.x, p.y - gesture.y) < 16;
-    if (tap && !shipSelected && nearPlayer(gesture)) shipSelected = true;
-    else if (!tap && shipSelected) moveTarget = p;
-    else if (tap && e.pointerType === 'mouse') throwBomb();
-    else if (tap && shipSelected) moveTarget = p;
+    const tap = !gesture.moved && Math.hypot(p.x - gesture.x, p.y - gesture.y) < 8;
+    if (!tap) placePlayer(p);
+    else if (e.pointerType === 'mouse') throwBomb();
+    dragging = false;
     gesture = null;
   }
   canvas.addEventListener('pointerup', finishGesture);
-  canvas.addEventListener('pointercancel', () => { gesture = null; });
+  canvas.addEventListener('pointercancel', () => { dragging = false; gesture = null; });
 
   renderIntel();
   syncHUD();
