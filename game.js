@@ -41,6 +41,8 @@
   const START_BOMBS = 50;
   const ONION_BOMBS = 5;
   const PLAYER_BOMB_DMG = 5;
+  const AURORA_COUNT = 30;
+  const AURORA_DMG = 3;
   const PAL = {
     player: { body: '#166dd4', edge: '#7bcaff', core: '#b8efff', flame: '#b2f4ff', wing: '#61c4ff', glow: '#48a6ff' },
     red: { body: '#a92c4b', edge: '#ff8ca0', core: '#ffccd4', flame: '#ffab75', wing: '#ff819a', glow: '#ff5c7e' },
@@ -91,6 +93,7 @@
   let itemClock = 0;
   let lightning = 0;
   let bombStock = START_BOMBS;
+  let auroraStock = AURORA_COUNT;
   let baseHp = BASE_MAX;
   let baseFlash = 0;
 
@@ -234,6 +237,7 @@
     $('items').textContent = `${collectedItems} / ${itemPlanNow.length}`;
     $('lightning').textContent = lightning > 0 ? `${lightning.toFixed(1)}s` : '—';
     $('bombs').textContent = String(bombStock);
+    $('aurora').textContent = String(auroraStock);
     $('base-hp').textContent = baseHp;
     $('base-bar').innerHTML = Array.from({ length: BASE_MAX }, (_, i) => `<i class="${i < baseHp ? '' : 'empty'}"></i>`).join('');
     $('base-bar').classList.toggle('low', baseHp <= 8);
@@ -248,7 +252,7 @@
     const final = itemCounts(ITEM_PLANS.final);
     $('intel-note').textContent = '普通飞机为红色，3 点生命，每 2 秒发射激光，命中扣 1 血。地面炮台与飞机同时出现。';
     $('level-list').innerHTML = LEVELS.map(lv => `<li>${describeLevel(lv)}</li>`).join('');
-    $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、绿 ${normal.green}、红 ${normal.red}、洋葱 ${normal.onion}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、绿 ${final.green}、红 ${final.red}、洋葱 ${final.onion}。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架小型黄色飞机，以及 ${ALLY_GROUND_COUNT} 支我方地面部队；地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。洋葱球：再获得 ${ONION_BOMBS} 颗自己投出的炸弹。开局 ${START_BOMBS} 颗追踪炸弹，鼠标点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。`;
+    $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、绿 ${normal.green}、红 ${normal.red}、洋葱 ${normal.onion}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、绿 ${final.green}、红 ${final.red}、洋葱 ${final.onion}。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架小型黄色飞机，以及 ${ALLY_GROUND_COUNT} 支我方地面部队；地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。洋葱球：再获得 ${ONION_BOMBS} 颗自己投出的炸弹。开局 ${START_BOMBS} 颗追踪炸弹，鼠标左键点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。极光 ${AURORA_COUNT} 发，鼠标右键发射一枚，打中扣 ${AURORA_DMG} 血。`;
   }
 
   function describeLevel(lv) {
@@ -439,6 +443,7 @@
     shipSelected = true;
     moveTarget = null;
     bombStock = START_BOMBS;
+    auroraStock = AURORA_COUNT;
     baseHp = BASE_MAX;
     baseFlash = 0;
     player = { x: W / 2, y: H - 95, hp: 15 };
@@ -820,6 +825,25 @@
     syncHUD();
   }
 
+  function fireAurora() {
+    if (mode !== 'playing' || !player || auroraStock <= 0) return;
+    auroraStock--;
+    lasers.push({
+      x: player.x,
+      y: player.y - 30,
+      vx: 0,
+      vy: -980,
+      enemy: false,
+      dmg: AURORA_DMG,
+      aurora: true,
+      dead: false,
+    });
+    muzzleFlash(player.x, player.y - 30, '#7dffc4');
+    tone(680, 0.09, 'sawtooth', 0.028);
+    noiseBurst(0.07, 1600, 0.045);
+    syncHUD();
+  }
+
   function throwBomb() {
     if (mode !== 'playing' || !player || bombStock <= 0) return;
     bombStock--;
@@ -949,6 +973,7 @@
         enemy: false,
         dmg: bolt ? LIGHTNING_DMG : 1,
         lightning: bolt,
+        playerShot: !bolt,
         dead: false,
       });
       muzzleFlash(player.x, player.y - 28, bolt ? '#e9f8ff' : '#79ddff');
@@ -1054,10 +1079,14 @@
             b.dead = true;
             e.hp -= b.dmg || 1;
             e.flash = 0.09;
-            const hitColor = b.lightning ? '#d7f4ff' : b.bomb ? '#ffb020' : e.kind === 'baozi' ? '#ffe38a' : '#f48196';
+            const hitColor = b.aurora ? '#7dffc4' : b.lightning ? '#d7f4ff' : b.bomb ? '#ffb020' : e.kind === 'baozi' ? '#ffe38a' : '#f48196';
             if (b.bomb) {
               boom(b.x, b.y, hitColor, 1.5);
               sfxExplosion(false);
+            } else if (b.aurora) {
+              boom(b.x, b.y, '#7dffc4', 1.05);
+              burst(b.x, b.y, '#b388ff', 10);
+              sfxImpact();
             } else {
               burst(b.x, b.y, hitColor, b.lightning ? 10 : 6);
               muzzleFlash(b.x, b.y, hitColor);
@@ -1310,6 +1339,68 @@
     ctx.restore();
   }
 
+  function drawCoolBolt(b) {
+    const len = Math.hypot(b.vx, b.vy) || 1;
+    const tx = b.x - b.vx / len * 28;
+    const ty = b.y - b.vy / len * 28;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.globalAlpha = 0.38;
+    ctx.strokeStyle = '#49e7ff';
+    ctx.shadowColor = '#49e7ff';
+    ctx.shadowBlur = 16;
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(b.x, b.y);
+    ctx.lineTo(tx, ty);
+    ctx.stroke();
+    ctx.globalAlpha = 0.95;
+    ctx.strokeStyle = '#c8fbff';
+    ctx.lineWidth = 3.4;
+    ctx.shadowBlur = 10;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.3;
+    ctx.shadowBlur = 0;
+    ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = '#9af6ff';
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, 2.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawAurora(b) {
+    const len = Math.hypot(b.vx, b.vy) || 1;
+    const ux = b.vx / len;
+    const uy = b.vy / len;
+    const px = -uy;
+    const py = ux;
+    const tail = 52;
+    ctx.save();
+    ctx.lineCap = 'round';
+    const bands = [['#7a4dff', 16, 0.32], ['#3dffb5', 8, 0.62], ['#f4fff8', 2.6, 1]];
+    for (const [color, width, alpha] of bands) {
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 18;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.moveTo(b.x, b.y);
+      for (let i = 1; i <= 6; i++) {
+        const t = i / 6;
+        const wave = Math.sin(elapsed * 22 + t * 9 + b.y * 0.05) * 4.2;
+        ctx.lineTo(b.x - ux * tail * t + px * wave, b.y - uy * tail * t + py * wave);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   function drawLaser(b) {
     if (b.lightning) {
       ctx.save();
@@ -1346,6 +1437,14 @@
     }
     if (b.bomb) {
       drawRoundBomb(b);
+      return;
+    }
+    if (b.aurora) {
+      drawAurora(b);
+      return;
+    }
+    if (b.playerShot) {
+      drawCoolBolt(b);
       return;
     }
     const heavy = (b.dmg || 1) >= 3;
@@ -1633,6 +1732,12 @@
     gesture = null;
   }
   window.addEventListener('pointerdown', beginPush);
+  arena.addEventListener('contextmenu', e => e.preventDefault());
+  window.addEventListener('pointerdown', e => {
+    if (e.button !== 2 || onUiControl(e) || !overArena(e)) return;
+    e.preventDefault();
+    fireAurora();
+  });
   window.addEventListener('pointermove', movePush);
   window.addEventListener('pointerup', endPush);
   window.addEventListener('pointercancel', () => {
