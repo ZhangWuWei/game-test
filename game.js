@@ -29,14 +29,15 @@
   ];
   // 每关道具构成原话没拆比例：一般 5 个、最后一关 12 个。三种球都要出现。
   const ITEM_PLANS = {
-    normal: ['blue', 'yellow', 'white', 'green', 'red', 'onion', 'pink'],
-    final: ['blue', 'yellow', 'white', 'green', 'red', 'onion', 'pink', 'blue', 'yellow', 'green', 'red', 'onion', 'pink', 'blue', 'onion'],
+    normal: ['blue', 'yellow', 'white', 'green', 'red', 'black', 'onion', 'pink'],
+    final: ['blue', 'yellow', 'white', 'green', 'red', 'black', 'onion', 'pink', 'blue', 'yellow', 'green', 'red', 'onion', 'pink', 'blue', 'onion'],
   };
   const LIGHTNING_TIME = 15;
   const LIGHTNING_DMG = 3;
   const FLAME_TIME = 10;
   const FLAME_DMG = 5;
   const HEAL_AMOUNT = 4;
+  const BASE_HEAL = 5;
   const ALLY_SHIP_COUNT = 3;
   const ALLY_GROUND_COUNT = 2;
   const ALLY_AA_COUNT = 1;
@@ -259,7 +260,7 @@
   }
 
   function itemCounts(plan) {
-    return plan.reduce((n, type) => { n[type] = (n[type] || 0) + 1; return n; }, { blue: 0, yellow: 0, green: 0, red: 0, onion: 0, pink: 0, white: 0 });
+    return plan.reduce((n, type) => { n[type] = (n[type] || 0) + 1; return n; }, { blue: 0, yellow: 0, green: 0, red: 0, onion: 0, pink: 0, white: 0, black: 0 });
   }
 
   function renderIntel() {
@@ -270,7 +271,7 @@
     const bg = BOSS.big;
     $('intel-note').textContent = `普通飞机为红色，3 点生命，每 2 秒发射激光，命中扣 1 血。地面炮台与飞机同时出现。小包子是蓝黄色飞机，每 ${bz.shot} 秒 ${bz.shotCount} 发，每发扣 ${bz.shotDmg} 血，每 ${bz.bomb} 秒 1 颗炸弹扣 ${bz.bombDmg} 血。小Boss 为橙色较小飞机，每 ${sm.shot} 秒 ${sm.shotCount} 发，每发扣 ${sm.shotDmg} 血，炸弹扣 ${sm.bombDmg} 血。大Boss 是红色、体积更大的飞机，每 ${bg.shot} 秒 ${bg.shotCount} 发，每发扣 ${bg.shotDmg} 血，炸弹扣 ${bg.bombDmg} 血。`;
     $('level-list').innerHTML = LEVELS.map(lv => `<li>${describeLevel(lv)}</li>`).join('');
-    $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、绿 ${normal.green}、红 ${normal.red}、洋葱 ${normal.onion}、粉 ${normal.pink}、白 ${normal.white}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、绿 ${final.green}、红 ${final.red}、洋葱 ${final.onion}、粉 ${final.pink}、白 ${final.white}。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架小型黄色飞机、${ALLY_GROUND_COUNT} 支我方地面部队，再加 ${ALLY_AA_COUNT} 座我方基地防空炮。防空炮弹打中飞机或坦克扣 ${AA_DMG} 血。地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。每关敌方也有 ${ENEMY_AA_COUNT} 座防空炮，炮台有 ${AA_HP} 滴血，炮弹打中同样扣 ${AA_DMG} 血。我方防空炮同样是 ${AA_HP} 滴血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。洋葱球：再获得 ${ONION_BOMBS} 颗自己投出的炸弹。开局 ${START_BOMBS} 颗追踪炸弹，鼠标左键点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。中子弹每关 ${AURORA_COUNT} 发，鼠标右键射出一小条追踪极光，打中扣 ${AURORA_DMG} 血。粉色小球：极光再加 ${PINK_AURORA} 发。白球：主角碰到后喷出火焰 ${FLAME_TIME} 秒，烧到的敌人扣 ${FLAME_DMG} 血，时间一到火焰消失。`;
+    $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、白 ${normal.white}、绿 ${normal.green}、红 ${normal.red}、黑 ${normal.black}、洋葱 ${normal.onion}、粉 ${normal.pink}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、白 ${final.white}、绿 ${final.green}、红 ${final.red}、黑 ${final.black}、洋葱 ${final.onion}、粉 ${final.pink}。黑球是第 6 个出现的，自己点击或主角碰到后基地回复 ${BASE_HEAL} 滴血。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架小型黄色飞机、${ALLY_GROUND_COUNT} 支我方地面部队，再加 ${ALLY_AA_COUNT} 座我方基地防空炮。防空炮弹打中飞机或坦克扣 ${AA_DMG} 血。地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。每关敌方也有 ${ENEMY_AA_COUNT} 座防空炮，炮台有 ${AA_HP} 滴血，炮弹打中同样扣 ${AA_DMG} 血。我方防空炮同样是 ${AA_HP} 滴血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。洋葱球：再获得 ${ONION_BOMBS} 颗自己投出的炸弹。开局 ${START_BOMBS} 颗追踪炸弹，鼠标左键点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。中子弹每关 ${AURORA_COUNT} 发，鼠标右键射出一小条追踪极光，打中扣 ${AURORA_DMG} 血。粉色小球：极光再加 ${PINK_AURORA} 发。白球：主角碰到后喷出火焰 ${FLAME_TIME} 秒，烧到的敌人扣 ${FLAME_DMG} 血，时间一到火焰消失。`;
   }
 
   function roster(lv) {
@@ -951,6 +952,10 @@
       burst(it.x, it.y, '#ff9a3c', 10);
       tone(420, 0.2, 'sawtooth', 0.04);
       noiseBurst(0.18, 900, 0.06);
+    } else if (it.type === 'black') {
+      baseHp = Math.min(BASE_MAX, baseHp + BASE_HEAL);
+      burst(it.x, it.y, '#e8e8e8', 18);
+      tone(360, 0.16, 'square', 0.03);
     } else if (it.type === 'red') {
       summonOwnBosses();
       burst(it.x, it.y, '#ff5c7e', 22);
@@ -1406,6 +1411,7 @@
       onion: ['#d9a6ff', '#fff0ff', '洋葱'],
       pink: ['#ff6eb4', '#ffe4f4', '极光'],
       white: ['#f7fbff', '#fff4e4', '火焰'],
+      black: ['#161616', '#d5d5d5', '基地'],
     }[it.type] || ['#ff5a78', '#ffe0e6', 'Boss'];
     const [color, core, label] = look;
     ctx.save();
@@ -1413,9 +1419,14 @@
     ctx.shadowBlur = 16;
     ctx.fillStyle = color;
     ctx.beginPath();
-    const radius = it.type === 'white' ? 8 : it.type === 'pink' ? 9 : 13;
+    const radius = it.type === 'white' || it.type === 'black' ? 8 : it.type === 'pink' ? 9 : 13;
     ctx.arc(it.x, it.y, radius, 0, Math.PI * 2);
     ctx.fill();
+    if (it.type === 'black') {
+      ctx.strokeStyle = '#f2f2f2';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+    }
     if (it.type === 'onion') {
       ctx.strokeStyle = '#fff6ff';
       ctx.lineWidth = 1.4;
@@ -1432,7 +1443,7 @@
     ctx.shadowBlur = 0;
     ctx.font = '12px "Noto Sans SC", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillStyle = color;
+    ctx.fillStyle = it.type === 'black' ? '#f4f7ff' : color;
     ctx.fillText(label, it.x, it.y - 18);
     ctx.restore();
   }
@@ -2161,6 +2172,21 @@
   function beginPush(e) {
     if (!player || (e.pointerType === 'mouse' && e.button !== 0) || onUiControl(e) || !overArena(e)) return;
     const p = locate(e);
+    const blackOrb = items.find(it => {
+      if (it.taken || it.type !== 'black') return false;
+      if (Math.hypot(it.x - p.x, it.y - p.y) < 20) return true;
+      if (firstPerson) {
+        const q = projectWorld(it.x, it.y);
+        return Math.hypot(q.x - p.x, q.y - p.y) < 22;
+      }
+      return false;
+    });
+    if (blackOrb && (mode === 'playing' || mode === 'paused')) {
+      collectItem(blackOrb);
+      viewPress = true;
+      e.preventDefault();
+      return;
+    }
     if ((mode === 'playing' || mode === 'paused') && hitViewButton(p)) {
       firstPerson = !firstPerson;
       viewPress = true;
