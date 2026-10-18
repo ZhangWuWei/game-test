@@ -7,21 +7,25 @@
   const W = 800;
   const H = 600;
 
-  // 地面炮台数量原话没有给，每关固定 4 座，和飞机同时出现。
+  // 前六关地面炮台原话没有另给数量，沿用每关 4 座。后四关的 Boss 和地面部队按关卡自己写。
   // 小包子的双发间隔、小Boss 数值原话没有给，集中写在这里。
-  const GROUND_PER_LEVEL = 4;
+  const GROUND_EARLY = 4;
   const BOSS = {
     baozi: { hp: 18, scale: 1.18, shot: 2, shotCount: 2, shotDmg: 2, bomb: 10, bombDmg: 4, spread: 0.24, speed: 250 },
     small: { hp: 36, scale: 1.55, shot: 4, shotCount: 2, shotDmg: 2, bomb: 10, bombDmg: 3, spread: 0.2, speed: 240 },
     big: { hp: 60, scale: 2.25, shot: 4, shotCount: 3, shotDmg: 3, bomb: 10, bombDmg: 4, spread: 0.26, speed: 250 },
   };
   const LEVELS = [
-    { name: '第1关', planes: 9, ground: GROUND_PER_LEVEL },
-    { name: '第2关', planes: 15, ground: GROUND_PER_LEVEL },
-    { name: '第3关', planes: 20, ground: GROUND_PER_LEVEL },
-    { name: '第4关', planes: 15, ground: GROUND_PER_LEVEL },
-    { name: '第5关', planes: 28, baozi: 1, ground: GROUND_PER_LEVEL },
-    { name: '最后一关', bosses: true, ground: GROUND_PER_LEVEL },
+    { name: '第1关', planes: 16, ground: GROUND_EARLY },
+    { name: '第2关', planes: 12, ground: GROUND_EARLY },
+    { name: '第3关', planes: 24, ground: GROUND_EARLY },
+    { name: '第4关', planes: 28, ground: GROUND_EARLY },
+    { name: '第5关', planes: 19, small: 2, ground: GROUND_EARLY },
+    { name: '第6关', planes: 28, ground: GROUND_EARLY },
+    { name: '第7关', planes: 16, baozi: 1, ground: 4 },
+    { name: '第8关', planes: 12, small: 1, ground: 5 },
+    { name: '第9关', planes: 10, big: 1, ground: 5 },
+    { name: '第10关', planes: 8, small: 1, big: 1, ground: 6 },
   ];
   // 每关道具构成原话没拆比例：一般 5 个、最后一关 12 个。三种球都要出现。
   const ITEM_PLANS = {
@@ -81,10 +85,9 @@
   let spawnedPlanes = 0;
   let killedGround = 0;
   let spawnedGround = 0;
-  let baoziSpawned = false;
-  let baoziDead = false;
-  let smallBossDead = false;
-  let bigBossDead = false;
+  let baoziKilled = 0;
+  let smallBossKilled = 0;
+  let bigBossKilled = 0;
   let bannerTimer = 0;
   let items = [];
   let allies = [];
@@ -213,13 +216,11 @@
   }
 
   function planeTarget(lv = LEVELS[levelIndex]) {
-    if (lv.bosses) return 2;
-    return lv.planes + (lv.baozi ? 1 : 0);
+    return (lv.planes || 0) + (lv.baozi || 0) + (lv.small || 0) + (lv.big || 0);
   }
 
-  function planeKilled(lv = LEVELS[levelIndex]) {
-    if (lv.bosses) return (smallBossDead ? 1 : 0) + (bigBossDead ? 1 : 0);
-    return killedPlanes + (baoziDead ? 1 : 0);
+  function planeKilled() {
+    return killedPlanes + baoziKilled + smallBossKilled + bigBossKilled;
   }
 
   function syncHUD() {
@@ -233,7 +234,7 @@
     $('best').textContent = String(Math.max(score, best)).padStart(6, '0');
     $('time').textContent = $('arena-time').textContent = formatTime(elapsed);
     $('level').textContent = lv.name;
-    $('planes').textContent = `${planeKilled(lv)} / ${planeTarget(lv)}`;
+    $('planes').textContent = `${planeKilled()} / ${planeTarget(lv)}`;
     $('ground').textContent = `${killedGround} / ${lv.ground}`;
     $('items').textContent = `${collectedItems} / ${itemPlanNow.length}`;
     $('lightning').textContent = lightning > 0 ? `${lightning.toFixed(1)}s` : '—';
@@ -251,35 +252,33 @@
   function renderIntel() {
     const normal = itemCounts(ITEM_PLANS.normal);
     const final = itemCounts(ITEM_PLANS.final);
-    $('intel-note').textContent = '普通飞机为红色，3 点生命，每 2 秒发射激光，命中扣 1 血。地面炮台与飞机同时出现。';
+    const bz = BOSS.baozi;
+    const sm = BOSS.small;
+    const bg = BOSS.big;
+    $('intel-note').textContent = `普通飞机为红色，3 点生命，每 2 秒发射激光，命中扣 1 血。地面炮台与飞机同时出现。小包子是蓝黄色飞机，每 ${bz.shot} 秒 ${bz.shotCount} 发，每发扣 ${bz.shotDmg} 血，每 ${bz.bomb} 秒 1 颗炸弹扣 ${bz.bombDmg} 血。小Boss 为橙色较小飞机，每 ${sm.shot} 秒 ${sm.shotCount} 发，每发扣 ${sm.shotDmg} 血，炸弹扣 ${sm.bombDmg} 血。大Boss 是红色、体积更大的飞机，每 ${bg.shot} 秒 ${bg.shotCount} 发，每发扣 ${bg.shotDmg} 血，炸弹扣 ${bg.bombDmg} 血。`;
     $('level-list').innerHTML = LEVELS.map(lv => `<li>${describeLevel(lv)}</li>`).join('');
     $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、绿 ${normal.green}、红 ${normal.red}、洋葱 ${normal.onion}、粉 ${normal.pink}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、绿 ${final.green}、红 ${final.red}、洋葱 ${final.onion}、粉 ${final.pink}。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架小型黄色飞机，以及 ${ALLY_GROUND_COUNT} 支我方地面部队；地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。洋葱球：再获得 ${ONION_BOMBS} 颗自己投出的炸弹。开局 ${START_BOMBS} 颗追踪炸弹，鼠标左键点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。中子弹每关 ${AURORA_COUNT} 发，鼠标右键射出一小条追踪极光，打中扣 ${AURORA_DMG} 血。粉色小球：极光再加 ${PINK_AURORA} 发。`;
   }
 
+  function roster(lv) {
+    const bits = [];
+    if (lv.planes) bits.push(`${lv.planes} 架普通飞机`);
+    if (lv.baozi) bits.push(`${lv.baozi} 架小包子`);
+    if (lv.small) bits.push(`${lv.small} 架小Boss`);
+    if (lv.big) bits.push(`${lv.big} 架大Boss`);
+    return bits.join('、');
+  }
+
   function describeLevel(lv) {
-    if (lv.bosses) {
-      const big = BOSS.big;
-      const small = BOSS.small;
-      return `<b>最后一关</b>：小Boss 与大Boss，同时有地面炮台 ${lv.ground}。大Boss 是红色、体积更大的飞机，每 ${big.shot} 秒发射 ${big.shotCount} 颗子弹，每颗扣 ${big.shotDmg} 血；每 ${big.bomb} 秒发射 1 颗炸弹，炸弹扣 ${big.bombDmg} 血。小Boss 为橙色较小飞机，每 ${small.shot} 秒 ${small.shotCount} 颗子弹，每颗扣 ${small.shotDmg} 血；每 ${small.bomb} 秒 1 颗炸弹，扣 ${small.bombDmg} 血。`;
-    }
-    if (lv.baozi) {
-      const b = BOSS.baozi;
-      const total = lv.planes + lv.baozi;
-      return `<b>第5关</b>：共 ${total} 个敌人，其中 1 个是小包子（蓝黄色飞机，每 ${b.shot} 秒发射 ${b.shotCount} 颗子弹，每颗扣 ${b.shotDmg} 血；每 ${b.bomb} 秒发射 1 颗炸弹，炸弹扣 ${b.bombDmg} 血），其余 ${lv.planes} 架为普通飞机，同时有地面炮台 ${lv.ground}。`;
-    }
-    return `<b>${lv.name}</b>：${lv.planes} 架飞机，同时有地面炮台 ${lv.ground}。`;
+    return `<b>${lv.name}</b>：${roster(lv)}，同时有地面炮台 ${lv.ground}。`;
   }
 
   function nextBlurb(lv) {
-    if (lv.bosses) return '最后一关：小Boss、大Boss，同时有地面炮台';
-    if (lv.baozi) return `第5关：共 ${lv.planes + lv.baozi} 个敌人，其中 1 个是小包子，同时有地面炮台`;
-    return `${lv.name}：${lv.planes} 架飞机，同时有地面炮台`;
+    return `${lv.name}：${roster(lv)}，同时有地面炮台 ${lv.ground}`;
   }
 
   function bannerText(lv) {
-    if (lv.bosses) return '最后一关 · 小Boss与大Boss · 地面炮台';
-    if (lv.baozi) return `第5关 · 共${lv.planes + lv.baozi}个敌人 · 含小包子`;
-    return `${lv.name} · ${lv.planes}架飞机 · 地面炮台`;
+    return `${lv.name} · ${roster(lv)} · 地面炮台 ${lv.ground}`;
   }
 
   function showBanner(text) {
@@ -369,13 +368,15 @@
     enemies.push(makeCraft('ground', homeX, -60, { homeX, homeY, phase: index * 1.3 }));
   }
 
-  function spawnBaozi() {
-    enemies.push(makeCraft('baozi', W / 2, -70, { homeX: W / 2, homeY: 132, phase: 0.4 }));
-  }
-
-  function spawnBosses() {
-    enemies.push(makeCraft('smallBoss', 210, -80, { homeX: 230, homeY: 168, phase: 0.2 }));
-    enemies.push(makeCraft('bigBoss', 560, -110, { homeX: 540, homeY: 118, phase: 1.4 }));
+  function spawnNamed(count, kind, y, homeY, loneX) {
+    for (let i = 0; i < count; i++) {
+      const homeX = count === 1 ? loneX : 150 + i * ((W - 300) / (count - 1));
+      enemies.push(makeCraft(kind, homeX, y - i * 36, {
+        homeX,
+        homeY,
+        phase: i * 1.15 + (kind === 'bigBoss' ? 1.4 : 0.2),
+      }));
+    }
   }
 
   function resetWaveFlags() {
@@ -383,10 +384,9 @@
     spawnedPlanes = 0;
     killedGround = 0;
     spawnedGround = 0;
-    baoziSpawned = false;
-    baoziDead = false;
-    smallBossDead = false;
-    bigBossDead = false;
+    baoziKilled = 0;
+    smallBossKilled = 0;
+    bigBossKilled = 0;
     enemies = [];
     lasers = [];
     particles = [];
@@ -407,7 +407,7 @@
   function beginWave() {
     const lv = LEVELS[levelIndex];
     resetWaveFlags();
-    itemPlanNow = lv.bosses ? ITEM_PLANS.final : ITEM_PLANS.normal;
+    itemPlanNow = levelIndex === LEVELS.length - 1 ? ITEM_PLANS.final : ITEM_PLANS.normal;
     player.hp = 15;
     player.x = W / 2;
     player.y = H - 95;
@@ -420,11 +420,9 @@
       spawnGround(i, lv.ground);
       spawnedGround++;
     }
-    if (lv.baozi) {
-      spawnBaozi();
-      baoziSpawned = true;
-    }
-    if (lv.bosses) spawnBosses();
+    if (lv.baozi) spawnNamed(lv.baozi, 'baozi', -70, 132, W / 2);
+    if (lv.small) spawnNamed(lv.small, 'smallBoss', -90, 168, lv.big ? 230 : W / 2);
+    if (lv.big) spawnNamed(lv.big, 'bigBoss', -120, 118, lv.small ? 560 : W / 2);
     mode = 'playing';
     hideOverlay();
     $('status').textContent = `${lv.name} · 交战中`;
@@ -503,7 +501,7 @@
     moveTarget = null;
     $('status').textContent = '任务完成';
     $('pause').disabled = true;
-    showOverlay('MISSION COMPLETE', '航线守住了。', `六关通过 · 得分 ${score} · 击毁 ${kills} · 存活 ${formatTime(elapsed)}`, '再飞一次', '按 Enter 重新开始');
+    showOverlay('MISSION COMPLETE', '航线守住了。', `${LEVELS.length}关通过 · 得分 ${score} · 击毁 ${kills} · 存活 ${formatTime(elapsed)}`, '再飞一次', '按 Enter 重新开始');
     burst(W / 2, H / 2, '#ffd15c', 40);
     burst(W / 3, H / 3, '#79ddff', 24);
     tone(720, 0.35);
@@ -576,9 +574,9 @@
     kills++;
     if (e.kind === 'plane') killedPlanes++;
     if (e.kind === 'ground') killedGround++;
-    if (e.kind === 'baozi') baoziDead = true;
-    if (e.kind === 'smallBoss') smallBossDead = true;
-    if (e.kind === 'bigBoss') bigBossDead = true;
+    if (e.kind === 'baozi') baoziKilled++;
+    if (e.kind === 'smallBoss') smallBossKilled++;
+    if (e.kind === 'bigBoss') bigBossKilled++;
     const color = e.kind === 'ground' ? '#d6c36a' : e.kind === 'baozi' ? '#ffd15c' : '#ff6d88';
     const scale = e.kind === 'bigBoss' ? 2.3 : e.kind === 'smallBoss' || e.kind === 'baozi' ? 1.7 : 1.2;
     boom(e.x, e.y, color, scale);
@@ -928,9 +926,10 @@
 
   function quotaMet() {
     const lv = LEVELS[levelIndex];
-    if (lv.bosses) return smallBossDead && bigBossDead;
-    if (killedPlanes < lv.planes) return false;
-    if (lv.baozi && !baoziDead) return false;
+    if (killedPlanes < (lv.planes || 0)) return false;
+    if (baoziKilled < (lv.baozi || 0)) return false;
+    if (smallBossKilled < (lv.small || 0)) return false;
+    if (bigBossKilled < (lv.big || 0)) return false;
     return true;
   }
 
@@ -1005,7 +1004,7 @@
     }
 
     itemClock += dt;
-    const itemGap = lv.bosses ? 2.1 : 3.2;
+    const itemGap = levelIndex === LEVELS.length - 1 ? 2.1 : 3.2;
     if (spawnedItems < itemPlanNow.length && itemClock >= itemGap) {
       itemClock = 0;
       spawnItem(itemPlanNow[spawnedItems]);
