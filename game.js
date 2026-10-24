@@ -386,14 +386,14 @@
     }, extra);
   }
 
-  function spawnPlane(x) {
-    enemies.push(makeCraft('plane', x ?? (60 + Math.random() * (W - 120)), -40 - Math.random() * 100));
+  function spawnPlane(x, y) {
+    enemies.push(makeCraft('plane', x ?? (60 + Math.random() * (W - 120)), y ?? (-40 - Math.random() * 100)));
   }
 
   function spawnGround(index, total) {
     const homeX = 110 + (index + 0.5) * ((W - 220) / total);
     const homeY = 168 + (index % 2) * 78;
-    enemies.push(makeCraft('ground', homeX, -60, { homeX, homeY, phase: index * 1.3 }));
+    enemies.push(makeCraft('ground', homeX, 90, { homeX, homeY, phase: index * 1.3 }));
   }
 
   function spawnHelicopters() {
@@ -408,7 +408,7 @@
       { x: 400, y: 420 },
     ].slice(0, HELI_ALLY_COUNT);
     enemyHomes.forEach((home, i) => {
-      enemies.push(makeCraft('heli', home.x, -70 - i * 36, {
+      enemies.push(makeCraft('heli', home.x, 70 + i * 24, {
         homeX: home.x,
         homeY: home.y,
         phase: i * 1.4,
@@ -432,7 +432,7 @@
   function spawnEnemyAa(index) {
     const homeX = ENEMY_AA_COUNT === 1 ? 400 : 180 + index * ((W - 360) / (ENEMY_AA_COUNT - 1));
     const homeY = 292;
-    enemies.push(makeCraft('aa', homeX, -90, { homeX, homeY, phase: 0.6 + index, hp: AA_HP, maxHp: AA_HP }));
+    enemies.push(makeCraft('aa', homeX, 110, { homeX, homeY, phase: 0.6 + index, hp: AA_HP, maxHp: AA_HP }));
   }
 
   function spawnNamed(count, kind, y, homeY, loneX) {
@@ -481,7 +481,7 @@
     player.y = H - 95;
     const opening = Math.min(lv.planes || 0, 3);
     for (let i = 0; i < opening; i++) {
-      spawnPlane(150 + i * 230);
+      spawnPlane(150 + i * 230, 48 + i * 42);
       spawnedPlanes++;
     }
     for (let i = 0; i < lv.ground; i++) {
@@ -2677,7 +2677,12 @@
 
   function beginGame() {
     const home = $('home');
-    if (home) home.classList.add('hidden');
+    const fromHome = homeOpen();
+    if (home) {
+      home.classList.add('hidden');
+      home.style.display = 'none';
+    }
+    if (!fromHome && (mode === 'playing' || mode === 'paused' || mode === 'levelclear')) return;
     start();
   }
 
@@ -2692,6 +2697,15 @@
     e.stopPropagation();
     beginGame();
   });
+  const homeEl = $('home');
+  if (homeEl) {
+    homeEl.addEventListener('pointerdown', e => {
+      if (e.target.closest && e.target.closest('#sound, #pause, a')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      beginGame();
+    });
+  }
 
   $('start').addEventListener('click', beginFromOverlay);
   $('pause').addEventListener('click', togglePause);
@@ -2715,9 +2729,8 @@
   window.addEventListener('keydown', e => {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Enter'].includes(e.code)) e.preventDefault();
     if (e.repeat) return;
-    if (e.code === 'Enter') {
-      if (homeOpen() || mode === 'ready') beginGame();
-      else if (mode === 'over' || mode === 'victory') start();
+    if (e.code === 'Enter' || ((homeOpen() || mode === 'ready') && e.code === 'Space')) {
+      if (homeOpen() || mode === 'ready' || mode === 'over' || mode === 'victory') beginGame();
       else if (mode === 'paused') togglePause();
       else if (mode === 'levelclear') nextLevel();
       return;
@@ -2727,6 +2740,7 @@
       else if (mode === 'levelclear') nextLevel();
       return;
     }
+    if (homeOpen() || mode === 'ready' || mode === 'over' || mode === 'victory') beginGame();
     if (mode === 'playing') keys.add(e.key.toLowerCase());
   });
   window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
@@ -2753,7 +2767,9 @@
     return !!(e.target && e.target.closest && e.target.closest('button, a, input, textarea, select'));
   }
   function beginPush(e) {
-    if (!player || (e.pointerType === 'mouse' && e.button !== 0) || onUiControl(e) || !overArena(e)) return;
+    if ((e.pointerType === 'mouse' && e.button !== 0) || onUiControl(e)) return;
+    if ((homeOpen() || mode === 'ready') && overArena(e)) beginGame();
+    if (!player || !overArena(e)) return;
     const p = locate(e);
     const blackOrb = items.find(it => {
       if (it.taken || it.type !== 'black') return false;
