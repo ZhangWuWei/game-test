@@ -29,8 +29,8 @@
   ];
   // 每关道具构成原话没拆比例：一般 5 个、最后一关 12 个。三种球都要出现。
   const ITEM_PLANS = {
-    normal: ['blue', 'yellow', 'white', 'green', 'red', 'black', 'onion', 'pink'],
-    final: ['blue', 'yellow', 'white', 'green', 'red', 'black', 'onion', 'pink', 'blue', 'yellow', 'green', 'red', 'onion', 'pink', 'blue', 'onion'],
+    normal: ['blue', 'yellow', 'white', 'green', 'red', 'black', 'bomb', 'pink'],
+    final: ['blue', 'yellow', 'white', 'green', 'red', 'black', 'bomb', 'pink', 'blue', 'yellow', 'green', 'red', 'bomb', 'pink', 'blue', 'bomb'],
   };
   const LIGHTNING_TIME = 15;
   const LIGHTNING_DMG = 3;
@@ -61,7 +61,7 @@
   const BASE_MAX = 19;
   const BASE_LINE = H - 100;
   const START_BOMBS = 50;
-  const ONION_BOMBS = 5;
+  const BOMB_ORB = 5;
   const PLAYER_BOMB_DMG = 5;
   const AURORA_COUNT = 30;
   const AURORA_DMG = 3;
@@ -269,7 +269,7 @@
   }
 
   function itemCounts(plan) {
-    return plan.reduce((n, type) => { n[type] = (n[type] || 0) + 1; return n; }, { blue: 0, yellow: 0, green: 0, red: 0, onion: 0, pink: 0, white: 0, black: 0 });
+    return plan.reduce((n, type) => { n[type] = (n[type] || 0) + 1; return n; }, { blue: 0, yellow: 0, green: 0, red: 0, bomb: 0, pink: 0, white: 0, black: 0 });
   }
 
   function renderIntel() {
@@ -280,7 +280,7 @@
     const bg = BOSS.big;
     $('intel-note').textContent = `普通飞机为红色，3 点生命，每 2 秒发射激光，命中扣 1 血。每关开局有 ${HELI_ENEMY_COUNT + HELI_ALLY_COUNT} 架直升机，敌方 ${HELI_ENEMY_COUNT} 架，我方 ${HELI_ALLY_COUNT} 架，${HELI_HP} 滴血，会发射普通子弹，打中扣 ${HELI_DMG} 血。直升机不计入过关数量。地面炮台与飞机同时出现。极速飞机是蓝黄色飞机，每 ${bz.shot} 秒 ${bz.shotCount} 发，每发扣 ${bz.shotDmg} 血，每 ${bz.bomb} 秒 1 颗炸弹扣 ${bz.bombDmg} 血。小Boss 为橙色较小飞机，每 ${sm.shot} 秒 ${sm.shotCount} 发，每发扣 ${sm.shotDmg} 血，炸弹扣 ${sm.bombDmg} 血。大Boss 是红色、体积更大的飞机，每 ${bg.shot} 秒 ${bg.shotCount} 发，每发扣 ${bg.shotDmg} 血，炸弹扣 ${bg.bombDmg} 血。`;
     $('level-list').innerHTML = LEVELS.map(lv => `<li>${describeLevel(lv)}</li>`).join('');
-    $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、白 ${normal.white}、绿 ${normal.green}、红 ${normal.red}、黑 ${normal.black}、洋葱 ${normal.onion}、粉 ${normal.pink}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、白 ${final.white}、绿 ${final.green}、红 ${final.red}、黑 ${final.black}、洋葱 ${final.onion}、粉 ${final.pink}。黑球是第 6 个出现的，自己点击或主角碰到后基地回复 ${BASE_HEAL} 滴血。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架小型黄色飞机、${ALLY_GROUND_COUNT} 支我方地面部队、${DRONE_COUNT} 架无人机，再加 ${ALLY_AA_COUNT} 座我方基地防空炮。无人机有 ${DRONE_HP} 滴血，被打中扣 ${DRONE_DMG} 滴，打中敌人也扣 ${DRONE_DMG} 滴。防空炮弹打中飞机或坦克扣 ${AA_DMG} 血。地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。每关敌方也有 ${ENEMY_AA_COUNT} 座防空炮，炮台有 ${AA_HP} 滴血，炮弹打中同样扣 ${AA_DMG} 血。我方防空炮同样是 ${AA_HP} 滴血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。洋葱球：再获得 ${ONION_BOMBS} 颗自己投出的炸弹。开局 ${START_BOMBS} 颗追踪炸弹，鼠标左键点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。中子弹每关 ${AURORA_COUNT} 发，鼠标右键射出一小条追踪极光，打中扣 ${AURORA_DMG} 血。粉色小球：极光再加 ${PINK_AURORA} 发。白球：主角碰到后喷出火焰 ${FLAME_TIME} 秒，烧到的敌人扣 ${FLAME_DMG} 血，时间一到火焰消失。`;
+    $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、白 ${normal.white}、绿 ${normal.green}、红 ${normal.red}、黑 ${normal.black}、炸弹 ${normal.bomb}、粉 ${normal.pink}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、白 ${final.white}、绿 ${final.green}、红 ${final.red}、黑 ${final.black}、炸弹 ${final.bomb}、粉 ${final.pink}。黑球是第 6 个出现的，自己点击或主角碰到后基地回复 ${BASE_HEAL} 滴血。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架小型黄色飞机、${ALLY_GROUND_COUNT} 支我方地面部队、${DRONE_COUNT} 架无人机，再加 ${ALLY_AA_COUNT} 座我方基地防空炮。无人机有 ${DRONE_HP} 滴血，被打中扣 ${DRONE_DMG} 滴，打中敌人也扣 ${DRONE_DMG} 滴。防空炮弹打中飞机或坦克扣 ${AA_DMG} 血。地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。每关敌方也有 ${ENEMY_AA_COUNT} 座防空炮，炮台有 ${AA_HP} 滴血，炮弹打中同样扣 ${AA_DMG} 血。我方防空炮同样是 ${AA_HP} 滴血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。炸弹能量球：再获得 ${BOMB_ORB} 颗自己投出的炸弹。开局 ${START_BOMBS} 颗追踪炸弹，鼠标左键点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。中子弹每关 ${AURORA_COUNT} 发，鼠标右键射出一小条追踪极光，打中扣 ${AURORA_DMG} 血。粉色小球：极光再加 ${PINK_AURORA} 发。白球：主角碰到后喷出火焰 ${FLAME_TIME} 秒，烧到的敌人扣 ${FLAME_DMG} 血，时间一到火焰消失。`;
   }
 
   function roster(lv) {
@@ -350,6 +350,7 @@
     burst(x, y, '#fff6d8', Math.round(7 * scale));
     particles.push({ kind: 'flash', x, y, vx: 0, vy: 0, life: 0.14, max: 0.14, color: '#fffaf0', r: 18 * scale });
     particles.push({ kind: 'ring', x, y, vx: 0, vy: 0, life: 0.38, max: 0.38, color, r: 6, grow: 170 * scale });
+    particles.push({ kind: 'ring', x, y, vx: 0, vy: 0, life: 0.28, max: 0.28, color: '#fff6ea', r: 3, grow: 90 * scale });
     if (scale > 1.3) {
       particles.push({ kind: 'ring', x, y, vx: 0, vy: 0, life: 0.55, max: 0.55, color: '#ffe7b0', r: 4, grow: 250 * scale });
     }
@@ -1022,9 +1023,9 @@
       auroraStock += PINK_AURORA;
       burst(it.x, it.y, '#ff8ad4', 16);
       tone(760, 0.14, 'square', 0.03);
-    } else if (it.type === 'onion') {
-      bombStock += ONION_BOMBS;
-      burst(it.x, it.y, '#e4b6ff', 18);
+    } else if (it.type === 'bomb') {
+      bombStock += BOMB_ORB;
+      burst(it.x, it.y, '#ff4db8', 22);
       tone(720, 0.16, 'square', 0.03);
     } else if (it.type === 'white') {
       flame = FLAME_TIME;
@@ -1399,13 +1400,21 @@
     if (mode === 'playing' && quotaMet()) levelClear();
   }
 
-  function ship(x, y, pal, flash, scale, faceDown) {
+  function ship(x, y, pal, flash, scale, faceDown, hero) {
     ctx.save();
     ctx.translate(x, y);
     if (faceDown) ctx.rotate(Math.PI);
     ctx.scale(scale, scale);
+    if (hero) {
+      ctx.globalAlpha = 0.28 + Math.sin(elapsed * 6) * 0.06;
+      ctx.fillStyle = pal.glow;
+      ctx.beginPath();
+      ctx.ellipse(0, 6, 40, 24, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
     ctx.shadowColor = pal.glow;
-    ctx.shadowBlur = 15;
+    ctx.shadowBlur = hero ? 26 : 20;
     const flame = 11 + Math.random() * 13;
     const g = ctx.createLinearGradient(0, 17, 0, 35 + flame);
     g.addColorStop(0, pal.flame);
@@ -1441,12 +1450,41 @@
     ctx.closePath();
     ctx.fill();
     ctx.strokeStyle = pal.wing;
+    ctx.lineWidth = hero ? 2.2 : 1.6;
+    ctx.shadowBlur = hero ? 14 : 8;
     ctx.beginPath();
     ctx.moveTo(-17, 9);
     ctx.lineTo(-10, 5);
     ctx.moveTo(17, 9);
     ctx.lineTo(10, 5);
     ctx.stroke();
+    ctx.fillStyle = flash ? '#fff' : pal.edge;
+    ctx.shadowBlur = 10;
+    for (const tip of [-27, 27]) {
+      ctx.beginPath();
+      ctx.arc(tip, 18, hero ? 2.4 : 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (hero) {
+      const flick = Math.sin(elapsed * 36) * 5;
+      const eg = ctx.createLinearGradient(0, 16, 0, 62 + flick);
+      eg.addColorStop(0, '#ffffff');
+      eg.addColorStop(0.22, '#b9f4ff');
+      eg.addColorStop(0.55, pal.flame);
+      eg.addColorStop(1, 'transparent');
+      ctx.fillStyle = eg;
+      ctx.shadowBlur = 16;
+      ctx.beginPath();
+      ctx.moveTo(-5, 16);
+      ctx.lineTo(0, 58 + flick);
+      ctx.lineTo(5, 16);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(0, -24, 2.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
   }
 
@@ -1508,15 +1546,29 @@
       yellow: ['#ffd15c', '#fff6cc', '部队'],
       green: ['#3ddc7a', '#e9ffe8', '回血'],
       red: ['#ff5a78', '#ffe0e6', 'Boss'],
-      onion: ['#d9a6ff', '#fff0ff', '洋葱'],
+      bomb: ['#ff4d9a', '#fff0f8', '炸弹'],
       pink: ['#ff6eb4', '#ffe4f4', '极光'],
       white: ['#f7fbff', '#fff4e4', '火焰'],
       black: ['#161616', '#d5d5d5', '基地'],
     }[it.type] || ['#ff5a78', '#ffe0e6', 'Boss'];
     const [color, core, label] = look;
+    const pulse = 0.84 + Math.sin(elapsed * 5 + (it.phase || 0)) * 0.16;
     ctx.save();
     ctx.shadowColor = color;
-    ctx.shadowBlur = 16;
+    ctx.shadowBlur = (it.type === 'bomb' ? 28 : 18) * pulse;
+    if (it.type === 'bomb') {
+      ctx.globalAlpha = 0.32 * pulse;
+      ctx.fillStyle = '#ff7ad4';
+      ctx.beginPath();
+      ctx.arc(it.x, it.y, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.62;
+      ctx.fillStyle = '#ff4db8';
+      ctx.beginPath();
+      ctx.arc(it.x, it.y, 16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
     ctx.fillStyle = color;
     ctx.beginPath();
     const radius = it.type === 'white' || it.type === 'black' ? 8 : it.type === 'pink' ? 9 : 13;
@@ -1527,24 +1579,22 @@
       ctx.lineWidth = 1.6;
       ctx.stroke();
     }
-    if (it.type === 'onion') {
-      ctx.strokeStyle = '#fff6ff';
-      ctx.lineWidth = 1.4;
-      for (const radius of [8, 5]) {
-        ctx.beginPath();
-        ctx.arc(it.x, it.y, radius, 0, Math.PI * 2);
-        ctx.stroke();
-      }
+    if (it.type === 'bomb') {
+      ctx.fillStyle = '#fff7fc';
+      ctx.beginPath();
+      ctx.arc(it.x, it.y, 5.2, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = core;
+      ctx.beginPath();
+      ctx.arc(it.x - 3, it.y - 3, 4.5, 0, Math.PI * 2);
+      ctx.fill();
     }
-    ctx.fillStyle = core;
-    ctx.beginPath();
-    ctx.arc(it.x - 3, it.y - 3, 4.5, 0, Math.PI * 2);
-    ctx.fill();
     ctx.shadowBlur = 0;
     ctx.font = '12px "Noto Sans SC", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillStyle = it.type === 'black' ? '#f4f7ff' : color;
-    ctx.fillText(label, it.x, it.y - 18);
+    ctx.fillStyle = it.type === 'black' ? '#f4f7ff' : it.type === 'bomb' ? '#ffe6f6' : color;
+    ctx.fillText(label, it.x, it.y - (it.type === 'bomb' ? 28 : 18));
     ctx.restore();
   }
 
@@ -1589,6 +1639,8 @@
     ctx.save();
     ctx.translate(e.x, e.y);
     if (!friendly) ctx.rotate(Math.PI);
+    ctx.shadowColor = edge;
+    ctx.shadowBlur = 14;
     ctx.fillStyle = 'rgba(0,0,0,.35)';
     ctx.beginPath();
     ctx.ellipse(0, 18, 14, 5, 0, 0, Math.PI * 2);
@@ -1649,6 +1701,8 @@
     const edge = '#ffe38a';
     ctx.save();
     ctx.translate(e.x, e.y);
+    ctx.shadowColor = '#ffe38a';
+    ctx.shadowBlur = 12;
     ctx.strokeStyle = edge;
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
@@ -2147,7 +2201,7 @@
     ctx.ellipse(W / 2, H - 108, 54, 18, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-    ship(W / 2, H - 108, PAL.player, hitFlash, 1.65, false);
+    ship(W / 2, H - 108, PAL.player, hitFlash, 1.65, false, true);
   }
 
   function draw(dt) {
@@ -2175,8 +2229,11 @@
       ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
       ctx.fill();
       if (s.r > 1.4) {
-        ctx.fillRect(s.x - 3, s.y - 0.3, 6, 0.6);
-        ctx.fillRect(s.x - 0.3, s.y - 3, 0.6, 6);
+        ctx.shadowColor = '#d7e8ff';
+        ctx.shadowBlur = 8;
+        ctx.fillRect(s.x - 5, s.y - 0.4, 10, 0.8);
+        ctx.fillRect(s.x - 0.4, s.y - 5, 0.8, 10);
+        ctx.shadowBlur = 0;
       }
     }
     ctx.globalAlpha = 1;
@@ -2190,9 +2247,17 @@
     planet.addColorStop(0.8, '#0a1223');
     planet.addColorStop(1, '#060c19');
     ctx.fillStyle = planet;
+    ctx.shadowColor = '#7eb6ff';
+    ctx.shadowBlur = 18;
     ctx.beginPath();
     ctx.arc(685, 160, 81, 0, Math.PI * 2);
     ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#9ec4ff55';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(685, 168, 108, 22, -0.35, 0, Math.PI * 2);
+    ctx.stroke();
 
     if (firstPerson && player && mode !== 'ready') {
       drawFirstPerson();
@@ -2227,18 +2292,21 @@
     ctx.fillStyle = baseFlash > 0 ? 'rgba(255,72,96,0.16)' : 'rgba(90,140,220,0.10)';
     ctx.fillRect(0, BASE_LINE, W, H - BASE_LINE);
     ctx.strokeStyle = baseFlash > 0 ? '#ff8aa0' : '#7eafff';
+    ctx.shadowColor = baseFlash > 0 ? '#ff8aa0' : '#7eafff';
+    ctx.shadowBlur = 12;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(0, BASE_LINE);
     ctx.lineTo(W, BASE_LINE);
     ctx.stroke();
+    ctx.shadowBlur = 0;
     ctx.font = '13px "Noto Sans SC", sans-serif';
     ctx.textAlign = 'left';
     ctx.fillStyle = baseFlash > 0 ? '#ffd0d8' : '#b7d4ff';
     ctx.fillText('我方基地', 18, BASE_LINE + 22);
 
     if (mode === 'ready') {
-      ship(W / 2, H - 100, PAL.player, 0, 1.1, false);
+      ship(W / 2, H - 100, PAL.player, 0, 1.1, false, true);
     } else {
       for (const e of enemies) {
         if (e.dead) continue;
@@ -2295,7 +2363,7 @@
           ctx.fillText('已选中', player.x, player.y - 40);
           ctx.restore();
         }
-        ship(player.x, player.y, PAL.player, hitFlash, 1, false);
+        ship(player.x, player.y, PAL.player, hitFlash, 1, false, true);
         if (flame > 0) drawFlame();
       }
       for (const b of lasers) drawLaser(b);
