@@ -2204,10 +2204,49 @@
     ship(W / 2, H - 108, PAL.player, hitFlash, 1.65, false, true);
   }
 
+  function brightenFirstPerson() {
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    const wash = ctx.createLinearGradient(0, 0, 0, H);
+    wash.addColorStop(0, 'rgba(170, 210, 255, 0.9)');
+    wash.addColorStop(0.35, 'rgba(90, 140, 230, 0.55)');
+    wash.addColorStop(0.7, 'rgba(40, 70, 150, 0.22)');
+    wash.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = wash;
+    ctx.fillRect(0, 0, W, H);
+    const neb = ctx.createRadialGradient(180, 120, 0, 180, 120, 260);
+    neb.addColorStop(0, 'rgba(150, 190, 255, 0.55)');
+    neb.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = neb;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+    ctx.save();
+    ctx.fillStyle = '#f7fbff';
+    ctx.shadowColor = '#d7ecff';
+    ctx.shadowBlur = 6;
+    for (let i = 0; i < 110; i++) {
+      const x = (i * 97 + 28) % W;
+      const y = (i * 47 + 12) % (H - 130);
+      const big = i % 7 === 0;
+      ctx.globalAlpha = 0.7 + Math.sin(elapsed * 2.2 + i) * 0.25;
+      ctx.beginPath();
+      ctx.arc(x, y, big ? 2.6 : 1.35, 0, Math.PI * 2);
+      ctx.fill();
+      if (big) {
+        ctx.fillRect(x - 7, y - 0.6, 14, 1.2);
+        ctx.fillRect(x - 0.6, y - 7, 1.2, 14);
+      }
+    }
+    ctx.restore();
+  }
+
   function draw(dt) {
     const jx = shake > 0.2 ? (Math.random() - 0.5) * shake : 0;
     const jy = shake > 0.2 ? (Math.random() - 0.5) * shake : 0;
     ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, jx * canvas.width / W, jy * canvas.height / H);
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = '#050a17';
     ctx.fillRect(0, 0, W, H);
     const nebula = ctx.createRadialGradient(W * 0.7, H * 0.33, 0, W * 0.7, H * 0.33, 420);
@@ -2260,6 +2299,7 @@
     ctx.stroke();
 
     if (firstPerson && player && mode !== 'ready') {
+      brightenFirstPerson();
       drawFirstPerson();
       for (const p of particles) {
         const fade = Math.max(0, p.life / p.max);
