@@ -11,9 +11,9 @@
   // 极速飞机的双发间隔、小Boss 数值原话没有给，集中写在这里。
   const GROUND_EARLY = 4;
   const BOSS = {
-    baozi: { hp: 18, scale: 1.18, shot: 2, shotCount: 2, shotDmg: 2, bomb: 10, bombDmg: 4, spread: 0.24, speed: 250 },
-    small: { hp: 36, scale: 1.55, shot: 4, shotCount: 2, shotDmg: 2, bomb: 10, bombDmg: 3, spread: 0.2, speed: 240 },
-    big: { hp: 60, scale: 2.25, shot: 4, shotCount: 3, shotDmg: 3, bomb: 10, bombDmg: 4, spread: 0.26, speed: 250 },
+    baozi: { hp: 18, scale: 1.18, shot: 2, shotCount: 2, shotDmg: 3, bomb: 10, bombDmg: 5, spread: 0.24, speed: 280 },
+    small: { hp: 36, scale: 1.55, shot: 2, shotCount: 4, shotDmg: 4, bomb: 6, bombDmg: 6, spread: 0.28, speed: 330 },
+    big: { hp: 60, scale: 2.25, shot: 1.5, shotCount: 5, shotDmg: 6, bomb: 4, bombDmg: 8, spread: 0.24, speed: 400, lance: 2, lanceDmg: 7, lanceSpeed: 470 },
   };
   const LEVELS = [
     { name: '第1关', planes: 16, ground: GROUND_EARLY },
@@ -278,7 +278,7 @@
     const bz = BOSS.baozi;
     const sm = BOSS.small;
     const bg = BOSS.big;
-    $('intel-note').textContent = `普通飞机为红色，3 点生命，每 2 秒发射激光，命中扣 1 血。每关开局有 ${HELI_ENEMY_COUNT + HELI_ALLY_COUNT} 架直升机，敌方 ${HELI_ENEMY_COUNT} 架，我方 ${HELI_ALLY_COUNT} 架，${HELI_HP} 滴血，会发射普通子弹，打中扣 ${HELI_DMG} 血。直升机不计入过关数量。地面炮台与飞机同时出现。极速飞机是蓝黄色飞机，每 ${bz.shot} 秒 ${bz.shotCount} 发，每发扣 ${bz.shotDmg} 血，每 ${bz.bomb} 秒 1 颗炸弹扣 ${bz.bombDmg} 血。小Boss 为橙色较小飞机，每 ${sm.shot} 秒 ${sm.shotCount} 发，每发扣 ${sm.shotDmg} 血，炸弹扣 ${sm.bombDmg} 血。大Boss 是红色、体积更大的飞机，每 ${bg.shot} 秒 ${bg.shotCount} 发，每发扣 ${bg.shotDmg} 血，炸弹扣 ${bg.bombDmg} 血。`;
+    $('intel-note').textContent = `普通飞机为红色，3 点生命，每 2 秒发射激光，命中扣 1 血。每关开局有 ${HELI_ENEMY_COUNT + HELI_ALLY_COUNT} 架直升机，敌方 ${HELI_ENEMY_COUNT} 架，我方 ${HELI_ALLY_COUNT} 架，${HELI_HP} 滴血，会发射普通子弹，打中扣 ${HELI_DMG} 血。直升机不计入过关数量。地面炮台与飞机同时出现。极速飞机是蓝黄色飞机，外形不变，每 ${bz.shot} 秒 ${bz.shotCount} 发，每发扣 ${bz.shotDmg} 血，每 ${bz.bomb} 秒 1 颗炸弹扣 ${bz.bombDmg} 血，一出现就会极快躲开你的子弹。小Boss 为橙色较小飞机，每 ${sm.shot} 秒 ${sm.shotCount} 发，每发扣 ${sm.shotDmg} 血，炸弹扣 ${sm.bombDmg} 血，弹道更亮，也会躲开子弹。大Boss 攻击最强，红色、体积更大，每 ${bg.shot} 秒 ${bg.shotCount} 发，每发扣 ${bg.shotDmg} 血，炸弹扣 ${bg.bombDmg} 血，每 ${bg.lance} 秒再补一发重击扣 ${bg.lanceDmg} 血。`;
     $('level-list').innerHTML = LEVELS.map(lv => `<li>${describeLevel(lv)}</li>`).join('');
     $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、白 ${normal.white}、绿 ${normal.green}、红 ${normal.red}、黑 ${normal.black}、炸弹 ${normal.bomb}、粉 ${normal.pink}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、白 ${final.white}、绿 ${final.green}、红 ${final.red}、黑 ${final.black}、炸弹 ${final.bomb}、粉 ${final.pink}。黑球是第 6 个出现的，自己点击或主角碰到后基地回复 ${BASE_HEAL} 滴血。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架小型黄色飞机、${ALLY_GROUND_COUNT} 支我方地面部队、${DRONE_COUNT} 架无人机，再加 ${ALLY_AA_COUNT} 座我方基地防空炮。无人机有 ${DRONE_HP} 滴血，被打中扣 ${DRONE_DMG} 滴，打中敌人也扣 ${DRONE_DMG} 滴。防空炮弹打中飞机或坦克扣 ${AA_DMG} 血。地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。每关敌方也有 ${ENEMY_AA_COUNT} 座防空炮，炮台有 ${AA_HP} 滴血，炮弹打中同样扣 ${AA_DMG} 血。我方防空炮同样是 ${AA_HP} 滴血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。炸弹能量球：再获得 ${BOMB_ORB} 颗自己投出的炸弹。开局 ${START_BOMBS} 颗追踪炸弹，鼠标左键点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。中子弹每关 ${AURORA_COUNT} 发，鼠标右键射出一小条追踪极光，打中扣 ${AURORA_DMG} 血。粉色小球：极光再加 ${PINK_AURORA} 发。白球：主角碰到后喷出火焰 ${FLAME_TIME} 秒，烧到的敌人扣 ${FLAME_DMG} 血，时间一到火焰消失。`;
   }
@@ -655,7 +655,7 @@
     syncHUD();
   }
 
-  function fire(e, dmg, speed, spread, bomb) {
+  function fire(e, dmg, speed, spread, bomb, look, lance) {
     const a = Math.atan2(player.y - e.y, player.x - e.x) + spread;
     const muzzle = (bomb ? 20 : 12) * (e.scale || 1);
     lasers.push({
@@ -666,14 +666,28 @@
       enemy: true,
       dmg,
       bomb: !!bomb,
+      baozi: e.kind === 'baozi' && !bomb,
+      boss: look || '',
+      lance: !!lance,
       dead: false,
     });
-    if (bomb) {
-      sfxWhoosh();
-      muzzleFlash(e.x, e.y, '#ffb020');
-    } else {
-      sfxEnemyShot();
-      muzzleFlash(e.x, e.y, '#ff8aa0');
+    const flash = look === 'big' ? '#ff4d5a' : look === 'small' ? '#ffb15a' : bomb ? '#ffb020' : '#ff8aa0';
+    if (bomb) sfxWhoosh();
+    else sfxEnemyShot();
+    muzzleFlash(e.x, e.y, flash);
+    if (look) {
+      particles.push({
+        kind: 'ring',
+        x: e.x,
+        y: e.y,
+        vx: 0,
+        vy: 30,
+        life: look === 'big' ? 0.28 : 0.18,
+        max: 0.28,
+        color: flash,
+        r: look === 'big' ? 12 : 6,
+        grow: look === 'big' ? 170 : 96,
+      });
     }
   }
 
@@ -707,19 +721,80 @@
     }
     const spec = e.kind === 'baozi' ? BOSS.baozi : e.kind === 'smallBoss' ? BOSS.small : e.kind === 'bigBoss' ? BOSS.big : null;
     if (!spec) return;
+    const look = e.kind === 'smallBoss' ? 'small' : e.kind === 'bigBoss' ? 'big' : '';
     e.timer += dt;
     if (e.timer >= spec.shot) {
       e.timer -= spec.shot;
       const count = spec.shotCount;
       for (let i = 0; i < count; i++) {
         const spread = count === 1 ? 0 : (i - (count - 1) / 2) * spec.spread;
-        fire(e, spec.shotDmg, spec.speed, spread, false);
+        fire(e, spec.shotDmg, spec.speed, spread, false, look);
       }
     }
     e.bombTimer += dt;
     if (e.bombTimer >= spec.bomb) {
       e.bombTimer -= spec.bomb;
-      fire(e, spec.bombDmg, 125, 0, true);
+      const bombSpeed = e.kind === 'bigBoss' ? 200 : e.kind === 'smallBoss' ? 160 : 125;
+      fire(e, spec.bombDmg, bombSpeed, 0, true, look);
+    }
+    if (spec.lance) {
+      e.lanceTimer = (e.lanceTimer || 0) + dt;
+      if (e.lanceTimer >= spec.lance) {
+        e.lanceTimer -= spec.lance;
+        fire(e, spec.lanceDmg, spec.lanceSpeed, 0, false, 'big', true);
+      }
+    }
+  }
+
+  function dodgeIncoming(e, dt) {
+    if (e.friendly) return;
+    const baozi = e.kind === 'baozi';
+    const big = e.kind === 'bigBoss';
+    const reach = baozi ? 420 : big ? 260 : 200;
+    const power = baozi ? 1080 : big ? 460 : 320;
+    const bias = baozi ? 168 : big ? 96 : 72;
+    e.dodgeHold = Math.max(0, (e.dodgeHold || 0) - dt);
+    e.dodgeBias = (e.dodgeBias || 0) * Math.exp(-dt * (baozi ? 0.45 : 1.15));
+    let bestT = Infinity;
+    let dir = 0;
+    const body = (e.scale || 1) * 24;
+    for (const b of lasers) {
+      if (b.dead || b.enemy || b.friendly) continue;
+      if (!(b.playerShot || b.lightning || b.aurora || b.bomb)) continue;
+      const dx = e.x - b.x;
+      const dy = e.y - b.y;
+      const spd = Math.hypot(b.vx, b.vy) || 1;
+      const approach = (dx * b.vx + dy * b.vy) / spd;
+      if (approach < 12 || approach > reach) continue;
+      const tHit = approach / spd;
+      if (tHit > (baozi ? 0.85 : 0.55)) continue;
+      const lateral = (dx * -b.vy + dy * b.vx) / spd;
+      const limit = body + (b.bomb ? 30 : 18) + (baozi ? 28 : 8);
+      if (Math.abs(lateral) > limit) continue;
+      if (tHit < bestT) {
+        bestT = tHit;
+        dir = Math.abs(lateral) < 12 ? ((W - e.x) >= e.x ? 1 : -1) : (lateral > 0 ? 1 : -1);
+      }
+    }
+    if (!dir) return;
+    if (dir > 0 && e.x > W - 70) dir = -1;
+    if (dir < 0 && e.x < 70) dir = 1;
+    e.dodgeDir = dir;
+    e.dodgeHold = baozi ? 0.34 : 0.2;
+    e.dodgeBias = dir * bias;
+    e.x += dir * power * dt;
+    if (!baozi && Math.random() < dt * 16) {
+      particles.push({
+        kind: 'spark',
+        x: e.x - dir * 18,
+        y: e.y,
+        vx: -dir * 90,
+        vy: 24,
+        life: 0.16,
+        max: 0.16,
+        color: big ? '#ff5a6a' : '#ffb15a',
+        w: 2.2,
+      });
     }
   }
 
@@ -792,10 +867,14 @@
       else if (e.y < BASE_LINE - 6) e.y += 14 * dt;
       return;
     }
-    const tx = e.homeX + Math.sin(elapsed * (e.kind === 'bigBoss' ? 0.7 : 0.9) + e.phase) * (e.kind === 'bigBoss' ? 120 : 70);
+    const weaving = e.kind === 'baozi' || e.kind === 'smallBoss' || e.kind === 'bigBoss';
+    const sway = e.kind === 'bigBoss' ? 130 : 70;
+    const tx = e.homeX + Math.sin(elapsed * (e.kind === 'bigBoss' ? 0.7 : 0.9) + e.phase) * sway + (weaving ? (e.dodgeBias || 0) : 0);
     const ty = e.homeY + Math.cos(elapsed * 0.55 + e.phase) * (e.kind === 'ground' ? 16 : 28);
-    e.x += (tx - e.x) * Math.min(1, dt * (e.kind === 'ground' ? 0.85 : 1.15));
+    const pull = weaving && (e.dodgeHold || 0) > 0 ? 0.35 : (e.kind === 'ground' ? 0.85 : 1.15);
+    e.x += (tx - e.x) * Math.min(1, dt * pull);
     e.y += (ty - e.y) * Math.min(1, dt * (e.kind === 'ground' ? 0.85 : 1.15));
+    if (weaving) dodgeIncoming(e, dt);
     e.x = Math.max(36, Math.min(W - 36, e.x));
     if (!e.friendly && e.kind !== 'plane' && e.y < BASE_LINE - 6) {
       const sink = e.kind === 'bigBoss' ? 22 : e.kind === 'smallBoss' ? 26 : e.kind === 'baozi' ? 18 : 14;
@@ -856,7 +935,7 @@
     return best;
   }
 
-  function fireFriendly(e, target, dmg, speed, spread, bomb) {
+  function fireFriendly(e, target, dmg, speed, spread, bomb, look, lance) {
     const a = Math.atan2(target.y - e.y, target.x - e.x) + spread;
     const muzzle = (bomb ? 20 : 12) * (e.scale || 1);
     lasers.push({
@@ -868,11 +947,20 @@
       friendly: true,
       dmg,
       bomb: !!bomb,
+      boss: look || '',
+      lance: !!lance,
       dead: false,
     });
     if (bomb) sfxWhoosh();
     else sfxFriendlyShot();
-    muzzleFlash(e.x, e.y, bomb ? '#ffb020' : '#9ad7ff');
+    const flash = look === 'big' ? '#8ecbff' : look === 'small' ? '#b7e4ff' : bomb ? '#ffb020' : '#9ad7ff';
+    muzzleFlash(e.x, e.y, flash);
+    if (look && !bomb) {
+      particles.push({
+        kind: 'ring', x: e.x, y: e.y, vx: 0, vy: -20,
+        life: 0.18, max: 0.18, color: flash, r: look === 'big' ? 10 : 5, grow: look === 'big' ? 140 : 80,
+      });
+    }
   }
 
   function summonDrones(count) {
@@ -1155,18 +1243,26 @@
     }
     const spec = a.kind === 'smallBoss' ? BOSS.small : a.kind === 'bigBoss' ? BOSS.big : null;
     if (!spec) return;
+    const look = a.kind === 'bigBoss' ? 'big' : 'small';
     a.timer += dt;
     if (a.timer >= spec.shot) {
       a.timer -= spec.shot;
       for (let i = 0; i < spec.shotCount; i++) {
         const spread = spec.shotCount === 1 ? 0 : (i - (spec.shotCount - 1) / 2) * spec.spread;
-        fireFriendly(a, target, spec.shotDmg, spec.speed, spread, false);
+        fireFriendly(a, target, spec.shotDmg, spec.speed, spread, false, look);
       }
     }
     a.bombTimer += dt;
     if (a.bombTimer >= spec.bomb) {
       a.bombTimer -= spec.bomb;
-      fireFriendly(a, target, spec.bombDmg, 140, 0, true);
+      fireFriendly(a, target, spec.bombDmg, a.kind === 'bigBoss' ? 200 : 160, 0, true, look);
+    }
+    if (spec.lance) {
+      a.lanceTimer = (a.lanceTimer || 0) + dt;
+      if (a.lanceTimer >= spec.lance) {
+        a.lanceTimer -= spec.lance;
+        fireFriendly(a, target, spec.lanceDmg, spec.lanceSpeed, 0, false, 'big', true);
+      }
     }
   }
 
@@ -1305,6 +1401,20 @@
       }
       b.x += b.vx * dt;
       b.y += b.vy * dt;
+      if (b.boss && !b.bomb && !b.dead && Math.random() < (b.lance ? 0.8 : 0.5)) {
+        const len = Math.hypot(b.vx, b.vy) || 1;
+        particles.push({
+          kind: 'spark',
+          x: b.x - b.vx / len * (6 + Math.random() * 10),
+          y: b.y - b.vy / len * (6 + Math.random() * 10),
+          vx: (Math.random() - 0.5) * 20,
+          vy: (Math.random() - 0.5) * 20,
+          life: 0.12 + Math.random() * 0.08,
+          max: 0.2,
+          color: b.enemy ? (b.boss === 'big' ? '#ff5a68' : '#ffb15a') : '#b7e6ff',
+          w: b.lance ? 2.4 : 1.6,
+        });
+      }
       if (b.playerShot && !b.dead && Math.random() < 0.45) {
         const len = Math.hypot(b.vx, b.vy) || 1;
         particles.push({
@@ -1793,8 +1903,14 @@
 
   function drawRoundBomb(b) {
     const flicker = 0.82 + Math.sin(elapsed * 32 + b.x * 0.2) * 0.18;
+    const scale = b.boss === 'big' ? 1.5 : b.boss === 'small' ? 1.16 : 1;
     ctx.save();
     ctx.translate(b.x, b.y);
+    ctx.scale(scale, scale);
+    if (b.boss) {
+      ctx.shadowColor = b.boss === 'big' ? '#ff2438' : '#ff8a32';
+      ctx.shadowBlur = b.boss === 'big' ? 22 : 12;
+    }
     ctx.fillStyle = '#141414';
     ctx.strokeStyle = '#3c3c3c';
     ctx.lineWidth = 2;
@@ -2004,6 +2120,73 @@
     ctx.restore();
   }
 
+  function drawBossBolt(b) {
+    const big = b.boss === 'big';
+    const len = Math.hypot(b.vx, b.vy) || 1;
+    const ux = b.vx / len;
+    const uy = b.vy / len;
+    const px = -uy;
+    const py = ux;
+    const tail = b.lance ? 58 : big ? 44 : 30;
+    const hostile = !!b.enemy;
+    const glow = hostile ? (big ? '#ff2d3a' : '#ff8a32') : (big ? '#7ecbff' : '#b7e4ff');
+    const helix = hostile ? (big ? '#ffd27a' : '#ffe0a8') : '#f4fbff';
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.globalAlpha = big ? 0.55 : 0.42;
+    ctx.strokeStyle = glow;
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = big ? 18 : 12;
+    ctx.lineWidth = b.lance ? 11 : big ? 8 : 5;
+    ctx.beginPath();
+    ctx.moveTo(b.x, b.y);
+    ctx.lineTo(b.x - ux * tail, b.y - uy * tail);
+    ctx.stroke();
+    ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = helix;
+    ctx.shadowColor = helix;
+    ctx.shadowBlur = 8;
+    ctx.lineWidth = big ? 1.6 : 1.1;
+    ctx.beginPath();
+    const waves = big ? 7 : 5;
+    for (let i = 0; i <= waves; i++) {
+      const t = i / waves;
+      const wave = Math.sin(elapsed * 28 + t * 14) * (big ? 4.4 : 2.8);
+      const x = b.x - ux * tail * t + px * wave;
+      const y = b.y - uy * tail * t + py * wave;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.strokeStyle = hostile ? '#fff4ea' : '#ffffff';
+    ctx.shadowColor = '#fff';
+    ctx.lineWidth = big ? 1.8 : 1.2;
+    ctx.beginPath();
+    ctx.moveTo(b.x, b.y);
+    ctx.lineTo(b.x - ux * tail * 0.72, b.y - uy * tail * 0.72);
+    ctx.stroke();
+    const arm = b.lance ? 8 : big ? 6.2 : 4.2;
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = big ? 1.6 : 1.2;
+    ctx.beginPath();
+    ctx.moveTo(b.x - arm, b.y);
+    ctx.lineTo(b.x + arm, b.y);
+    ctx.moveTo(b.x, b.y - arm);
+    ctx.lineTo(b.x, b.y + arm);
+    ctx.moveTo(b.x - arm * 0.65, b.y - arm * 0.65);
+    ctx.lineTo(b.x + arm * 0.65, b.y + arm * 0.65);
+    ctx.moveTo(b.x - arm * 0.65, b.y + arm * 0.65);
+    ctx.lineTo(b.x + arm * 0.65, b.y - arm * 0.65);
+    ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowBlur = big ? 16 : 10;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.lance ? 3.4 : big ? 2.8 : 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
   function drawLaser(b) {
     if (b.lightning) {
       drawLightning(b);
@@ -2056,8 +2239,12 @@
       drawCoolBolt(b);
       return;
     }
-    const heavy = (b.dmg || 1) >= 3;
-    const mid = (b.dmg || 1) === 2;
+    if (b.boss) {
+      drawBossBolt(b);
+      return;
+    }
+    const heavy = !b.baozi && (b.dmg || 1) >= 3;
+    const mid = b.baozi || (b.dmg || 1) === 2;
     ctx.save();
     ctx.lineCap = 'round';
     ctx.strokeStyle = !b.enemy ? '#79ddff' : heavy ? '#ff3b3b' : mid ? '#ffd15c' : '#ff5c7e';
@@ -2161,15 +2348,30 @@
     ctx.restore();
   }
 
+  function drawBossAura(e, friendly) {
+    if (e.kind !== 'bigBoss' && e.kind !== 'smallBoss') return;
+    const big = e.kind === 'bigBoss';
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    ctx.fillStyle = friendly ? (big ? '#49b7ff22' : '#49b7ff14') : (big ? '#ff335522' : '#ff8a3218');
+    ctx.beginPath();
+    ctx.arc(0, 0, big ? 58 : 36, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = friendly ? '#9fd8ff' : (big ? '#ff4d62' : '#ff9a4a');
+    ctx.shadowColor = ctx.strokeStyle;
+    ctx.shadowBlur = big ? 16 : 10;
+    ctx.lineWidth = big ? 2 : 1.4;
+    ctx.beginPath();
+    ctx.arc(0, 0, big ? 64 : 40, elapsed * (big ? 1.3 : 2), elapsed * (big ? 1.3 : 2) + Math.PI * 1.3);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, big ? 72 : 46, -elapsed * 0.9, -elapsed * 0.9 + Math.PI * 0.9);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function paintEnemyWorld(e) {
-    if (e.kind === 'bigBoss') {
-      ctx.save();
-      ctx.fillStyle = '#ff335522';
-      ctx.beginPath();
-      ctx.arc(e.x, e.y, 58, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
+    drawBossAura(e, false);
     if (e.kind === 'ground') drawGround(e);
     else if (e.kind === 'aa') drawAa(e, false);
     else if (e.kind === 'heli') drawHeli(e, false);
@@ -2181,14 +2383,7 @@
   }
 
   function paintAllyWorld(a) {
-    if (a.kind === 'bigBoss') {
-      ctx.save();
-      ctx.fillStyle = '#49b7ff22';
-      ctx.beginPath();
-      ctx.arc(a.x, a.y, 58, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
+    drawBossAura(a, true);
     if (a.kind === 'ground') drawGround(a, true);
     else if (a.kind === 'aa') drawAa(a, true);
     else if (a.kind === 'heli') drawHeli(a, true);
@@ -2387,14 +2582,7 @@
     } else {
       for (const e of enemies) {
         if (e.dead) continue;
-        if (e.kind === 'bigBoss') {
-          ctx.save();
-          ctx.fillStyle = '#ff335522';
-          ctx.beginPath();
-          ctx.arc(e.x, e.y, 58, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
-        }
+        drawBossAura(e, false);
         if (e.kind === 'ground') drawGround(e);
         else if (e.kind === 'aa') drawAa(e, false);
         else if (e.kind === 'heli') drawHeli(e, false);
@@ -2407,14 +2595,7 @@
       for (const it of items) drawItem(it);
       for (const a of allies) {
         if (a.dead) continue;
-        if (a.kind === 'bigBoss') {
-          ctx.save();
-          ctx.fillStyle = '#49b7ff22';
-          ctx.beginPath();
-          ctx.arc(a.x, a.y, 58, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
-        }
+        drawBossAura(a, true);
         if (a.kind === 'ground') drawGround(a, true);
         else if (a.kind === 'aa') drawAa(a, true);
         else if (a.kind === 'heli') drawHeli(a, true);
@@ -2489,11 +2670,28 @@
     requestAnimationFrame(frame);
   }
 
+  function homeOpen() {
+    const home = $('home');
+    return !!(home && !home.classList.contains('hidden'));
+  }
+
+  function beginGame() {
+    const home = $('home');
+    if (home) home.classList.add('hidden');
+    start();
+  }
+
   function beginFromOverlay() {
     if (mode === 'paused') togglePause();
     else if (mode === 'levelclear') nextLevel();
-    else start();
+    else beginGame();
   }
+
+  $('play').addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    beginGame();
+  });
 
   $('start').addEventListener('click', beginFromOverlay);
   $('pause').addEventListener('click', togglePause);
@@ -2518,7 +2716,8 @@
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Enter'].includes(e.code)) e.preventDefault();
     if (e.repeat) return;
     if (e.code === 'Enter') {
-      if (mode === 'ready' || mode === 'over' || mode === 'victory') start();
+      if (homeOpen() || mode === 'ready') beginGame();
+      else if (mode === 'over' || mode === 'victory') start();
       else if (mode === 'paused') togglePause();
       else if (mode === 'levelclear') nextLevel();
       return;
@@ -2655,5 +2854,4 @@
   syncHUD();
   resize();
   requestAnimationFrame(frame);
-  start();
 })();
