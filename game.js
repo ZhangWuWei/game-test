@@ -39,7 +39,7 @@
   const HEAL_AMOUNT = 4;
   const BASE_HEAL = 5;
   const ALLY_SHIP_COUNT = 3;
-  const DRONE_COUNT = 2;
+  const DRONE_COUNT = 4;
   const DRONE_HP = 5;
   const DRONE_DMG = 2;
   const DRONE_INTERVAL = 0.7;
@@ -55,7 +55,8 @@
   const HELI_HP = 3;
   const HELI_DMG = 2;
   const HELI_INTERVAL = 2;
-  const HELI_PER_SIDE = 2;
+  const HELI_ENEMY_COUNT = 2;
+  const HELI_ALLY_COUNT = 1;
   const PLAYER_MAX = 26;
   const BASE_MAX = 19;
   const BASE_LINE = H - 100;
@@ -277,7 +278,7 @@
     const bz = BOSS.baozi;
     const sm = BOSS.small;
     const bg = BOSS.big;
-    $('intel-note').textContent = `普通飞机为红色，3 点生命，每 2 秒发射激光，命中扣 1 血。每关开局有 ${HELI_PER_SIDE * 2} 架直升机，敌我各 ${HELI_PER_SIDE} 架，${HELI_HP} 滴血，会发射普通子弹，打中扣 ${HELI_DMG} 血。直升机不计入过关数量。地面炮台与飞机同时出现。极速飞机是蓝黄色飞机，每 ${bz.shot} 秒 ${bz.shotCount} 发，每发扣 ${bz.shotDmg} 血，每 ${bz.bomb} 秒 1 颗炸弹扣 ${bz.bombDmg} 血。小Boss 为橙色较小飞机，每 ${sm.shot} 秒 ${sm.shotCount} 发，每发扣 ${sm.shotDmg} 血，炸弹扣 ${sm.bombDmg} 血。大Boss 是红色、体积更大的飞机，每 ${bg.shot} 秒 ${bg.shotCount} 发，每发扣 ${bg.shotDmg} 血，炸弹扣 ${bg.bombDmg} 血。`;
+    $('intel-note').textContent = `普通飞机为红色，3 点生命，每 2 秒发射激光，命中扣 1 血。每关开局有 ${HELI_ENEMY_COUNT + HELI_ALLY_COUNT} 架直升机，敌方 ${HELI_ENEMY_COUNT} 架，我方 ${HELI_ALLY_COUNT} 架，${HELI_HP} 滴血，会发射普通子弹，打中扣 ${HELI_DMG} 血。直升机不计入过关数量。地面炮台与飞机同时出现。极速飞机是蓝黄色飞机，每 ${bz.shot} 秒 ${bz.shotCount} 发，每发扣 ${bz.shotDmg} 血，每 ${bz.bomb} 秒 1 颗炸弹扣 ${bz.bombDmg} 血。小Boss 为橙色较小飞机，每 ${sm.shot} 秒 ${sm.shotCount} 发，每发扣 ${sm.shotDmg} 血，炸弹扣 ${sm.bombDmg} 血。大Boss 是红色、体积更大的飞机，每 ${bg.shot} 秒 ${bg.shotCount} 发，每发扣 ${bg.shotDmg} 血，炸弹扣 ${bg.bombDmg} 血。`;
     $('level-list').innerHTML = LEVELS.map(lv => `<li>${describeLevel(lv)}</li>`).join('');
     $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、白 ${normal.white}、绿 ${normal.green}、红 ${normal.red}、黑 ${normal.black}、洋葱 ${normal.onion}、粉 ${normal.pink}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、白 ${final.white}、绿 ${final.green}、红 ${final.red}、黑 ${final.black}、洋葱 ${final.onion}、粉 ${final.pink}。黑球是第 6 个出现的，自己点击或主角碰到后基地回复 ${BASE_HEAL} 滴血。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架小型黄色飞机、${ALLY_GROUND_COUNT} 支我方地面部队、${DRONE_COUNT} 架无人机，再加 ${ALLY_AA_COUNT} 座我方基地防空炮。无人机有 ${DRONE_HP} 滴血，被打中扣 ${DRONE_DMG} 滴，打中敌人也扣 ${DRONE_DMG} 滴。防空炮弹打中飞机或坦克扣 ${AA_DMG} 血。地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。每关敌方也有 ${ENEMY_AA_COUNT} 座防空炮，炮台有 ${AA_HP} 滴血，炮弹打中同样扣 ${AA_DMG} 血。我方防空炮同样是 ${AA_HP} 滴血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。洋葱球：再获得 ${ONION_BOMBS} 颗自己投出的炸弹。开局 ${START_BOMBS} 颗追踪炸弹，鼠标左键点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。中子弹每关 ${AURORA_COUNT} 发，鼠标右键射出一小条追踪极光，打中扣 ${AURORA_DMG} 血。粉色小球：极光再加 ${PINK_AURORA} 发。白球：主角碰到后喷出火焰 ${FLAME_TIME} 秒，烧到的敌人扣 ${FLAME_DMG} 血，时间一到火焰消失。`;
   }
@@ -292,11 +293,11 @@
   }
 
   function describeLevel(lv) {
-    return `<b>${lv.name}</b>：${roster(lv)}，同时有地面炮台 ${lv.ground}，敌方防空炮台 ${ENEMY_AA_COUNT}，敌我直升机各 ${HELI_PER_SIDE}。`;
+    return `<b>${lv.name}</b>：${roster(lv)}，同时有地面炮台 ${lv.ground}，敌方防空炮台 ${ENEMY_AA_COUNT}，敌方直升机 ${HELI_ENEMY_COUNT}，我方直升机 ${HELI_ALLY_COUNT}。`;
   }
 
   function nextBlurb(lv) {
-    return `${lv.name}：${roster(lv)}，地面炮台 ${lv.ground}，敌方防空炮台 ${ENEMY_AA_COUNT}，敌我直升机各 ${HELI_PER_SIDE}`;
+    return `${lv.name}：${roster(lv)}，地面炮台 ${lv.ground}，敌方防空炮台 ${ENEMY_AA_COUNT}，敌方直升机 ${HELI_ENEMY_COUNT}，我方直升机 ${HELI_ALLY_COUNT}`;
   }
 
   function bannerText(lv) {
@@ -393,11 +394,13 @@
     const enemyHomes = [
       { x: 180, y: 128 },
       { x: 620, y: 168 },
-    ];
+      { x: 400, y: 148 },
+    ].slice(0, HELI_ENEMY_COUNT);
     const allyHomes = [
       { x: 150, y: 400 },
       { x: 650, y: 440 },
-    ];
+      { x: 400, y: 420 },
+    ].slice(0, HELI_ALLY_COUNT);
     enemyHomes.forEach((home, i) => {
       enemies.push(makeCraft('heli', home.x, -70 - i * 36, {
         homeX: home.x,
