@@ -39,6 +39,10 @@
   const HEAL_AMOUNT = 4;
   const BASE_HEAL = 5;
   const ALLY_SHIP_COUNT = 3;
+  const DRONE_COUNT = 2;
+  const DRONE_HP = 5;
+  const DRONE_DMG = 2;
+  const DRONE_INTERVAL = 0.7;
   const ALLY_GROUND_COUNT = 2;
   const ALLY_AA_COUNT = 3;
   const ENEMY_AA_COUNT = 1;
@@ -275,7 +279,7 @@
     const bg = BOSS.big;
     $('intel-note').textContent = `普通飞机为红色，3 点生命，每 2 秒发射激光，命中扣 1 血。每关开局有 ${HELI_PER_SIDE * 2} 架直升机，敌我各 ${HELI_PER_SIDE} 架，${HELI_HP} 滴血，会发射普通子弹，打中扣 ${HELI_DMG} 血。直升机不计入过关数量。地面炮台与飞机同时出现。小包子是蓝黄色飞机，每 ${bz.shot} 秒 ${bz.shotCount} 发，每发扣 ${bz.shotDmg} 血，每 ${bz.bomb} 秒 1 颗炸弹扣 ${bz.bombDmg} 血。小Boss 为橙色较小飞机，每 ${sm.shot} 秒 ${sm.shotCount} 发，每发扣 ${sm.shotDmg} 血，炸弹扣 ${sm.bombDmg} 血。大Boss 是红色、体积更大的飞机，每 ${bg.shot} 秒 ${bg.shotCount} 发，每发扣 ${bg.shotDmg} 血，炸弹扣 ${bg.bombDmg} 血。`;
     $('level-list').innerHTML = LEVELS.map(lv => `<li>${describeLevel(lv)}</li>`).join('');
-    $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、白 ${normal.white}、绿 ${normal.green}、红 ${normal.red}、黑 ${normal.black}、洋葱 ${normal.onion}、粉 ${normal.pink}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、白 ${final.white}、绿 ${final.green}、红 ${final.red}、黑 ${final.black}、洋葱 ${final.onion}、粉 ${final.pink}。黑球是第 6 个出现的，自己点击或主角碰到后基地回复 ${BASE_HEAL} 滴血。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架小型黄色飞机、${ALLY_GROUND_COUNT} 支我方地面部队，再加 ${ALLY_AA_COUNT} 座我方基地防空炮。防空炮弹打中飞机或坦克扣 ${AA_DMG} 血。地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。每关敌方也有 ${ENEMY_AA_COUNT} 座防空炮，炮台有 ${AA_HP} 滴血，炮弹打中同样扣 ${AA_DMG} 血。我方防空炮同样是 ${AA_HP} 滴血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。洋葱球：再获得 ${ONION_BOMBS} 颗自己投出的炸弹。开局 ${START_BOMBS} 颗追踪炸弹，鼠标左键点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。中子弹每关 ${AURORA_COUNT} 发，鼠标右键射出一小条追踪极光，打中扣 ${AURORA_DMG} 血。粉色小球：极光再加 ${PINK_AURORA} 发。白球：主角碰到后喷出火焰 ${FLAME_TIME} 秒，烧到的敌人扣 ${FLAME_DMG} 血，时间一到火焰消失。`;
+    $('item-note').innerHTML = `道具会自动出现。一般每关 <b>${ITEM_PLANS.normal.length}</b> 个：蓝 ${normal.blue}、黄 ${normal.yellow}、白 ${normal.white}、绿 ${normal.green}、红 ${normal.red}、黑 ${normal.black}、洋葱 ${normal.onion}、粉 ${normal.pink}。最后一关 <b>${ITEM_PLANS.final.length}</b> 个：蓝 ${final.blue}、黄 ${final.yellow}、白 ${final.white}、绿 ${final.green}、红 ${final.red}、黑 ${final.black}、洋葱 ${final.onion}、粉 ${final.pink}。黑球是第 6 个出现的，自己点击或主角碰到后基地回复 ${BASE_HEAL} 滴血。蓝球：${LIGHTNING_TIME} 秒内子弹变成雷电，雷电击中扣 ${LIGHTNING_DMG} 血。黄球：召唤 ${ALLY_SHIP_COUNT} 架小型黄色飞机、${ALLY_GROUND_COUNT} 支我方地面部队、${DRONE_COUNT} 架无人机，再加 ${ALLY_AA_COUNT} 座我方基地防空炮。无人机有 ${DRONE_HP} 滴血，被打中扣 ${DRONE_DMG} 滴，打中敌人也扣 ${DRONE_DMG} 滴。防空炮弹打中飞机或坦克扣 ${AA_DMG} 血。地面部队每 ${MORTAR_INTERVAL} 秒发射 1 发迫击炮，打中扣 ${MORTAR_DMG} 血。每关敌方也有 ${ENEMY_AA_COUNT} 座防空炮，炮台有 ${AA_HP} 滴血，炮弹打中同样扣 ${AA_DMG} 血。我方防空炮同样是 ${AA_HP} 滴血。绿球：回复 ${HEAL_AMOUNT} 滴血。红球：召唤我方小Boss 和我方大Boss。洋葱球：再获得 ${ONION_BOMBS} 颗自己投出的炸弹。开局 ${START_BOMBS} 颗追踪炸弹，鼠标左键点击投出，炸中扣 ${PLAYER_BOMB_DMG} 血。中子弹每关 ${AURORA_COUNT} 发，鼠标右键射出一小条追踪极光，打中扣 ${AURORA_DMG} 血。粉色小球：极光再加 ${PINK_AURORA} 发。白球：主角碰到后喷出火焰 ${FLAME_TIME} 秒，烧到的敌人扣 ${FLAME_DMG} 血，时间一到火焰消失。`;
   }
 
   function roster(lv) {
@@ -711,6 +715,7 @@
   }
 
   function hitRadius(e) {
+    if (e.kind === 'drone') return { x: 16, y: 14 };
     if (e.kind === 'ground' || e.kind === 'aa') return { x: 30, y: 24 };
     const s = e.scale || 1;
     return { x: 22 * s, y: 22 * s };
@@ -728,11 +733,12 @@
       e.x = Math.max(28, Math.min(W - 28, e.x));
       return;
     }
-    if (e.friendly && e.kind === 'wing') {
+    if (e.friendly && (e.kind === 'wing' || e.kind === 'drone')) {
       const foe = nearestEnemy(e);
-      const orbit = elapsed * 1.15 + e.phase;
-      const tx = foe ? foe.x + Math.cos(orbit) * 78 : e.homeX + Math.sin(orbit) * 170;
-      const ty = foe ? Math.max(64, Math.min(H - 150, foe.y + 96)) : e.homeY + Math.cos(orbit * 0.8) * 64;
+      const orbit = elapsed * (e.kind === 'drone' ? 1.7 : 1.15) + e.phase;
+      const ring = e.kind === 'drone' ? 48 : 78;
+      const tx = foe ? foe.x + Math.cos(orbit) * ring : e.homeX + Math.sin(orbit) * 170;
+      const ty = foe ? Math.max(64, Math.min(H - 150, foe.y + (e.kind === 'drone' ? 70 : 96))) : e.homeY + Math.cos(orbit * 0.8) * 64;
       const dx = tx - e.x;
       const dy = ty - e.y;
       const dist = Math.hypot(dx, dy) || 1;
@@ -860,6 +866,23 @@
     muzzleFlash(e.x, e.y, bomb ? '#ffb020' : '#9ad7ff');
   }
 
+  function summonDrones(count) {
+    const start = allies.filter(a => a.kind === 'drone' && !a.dead).length;
+    for (let i = 0; i < count; i++) {
+      const n = start + i;
+      const x = 180 + (n % 4) * 140;
+      const y = 270;
+      allies.push(makeCraft('drone', x, -24 - i * 16, {
+        homeX: x,
+        homeY: y,
+        friendly: true,
+        hp: DRONE_HP,
+        maxHp: DRONE_HP,
+        timer: 0.15 * i,
+      }));
+    }
+  }
+
   function summonShips(count) {
     const start = allies.filter(a => a.kind === 'wing' && !a.dead).length;
     for (let i = 0; i < count; i++) {
@@ -984,6 +1007,7 @@
     } else if (it.type === 'yellow') {
       summonShips(ALLY_SHIP_COUNT);
       summonGroundTroops(ALLY_GROUND_COUNT);
+      summonDrones(DRONE_COUNT);
       summonAaTurrets(ALLY_AA_COUNT);
       burst(it.x, it.y, '#ffd15c', 18);
       tone(640, 0.18);
@@ -1104,6 +1128,14 @@
       }
       return;
     }
+    if (a.kind === 'drone') {
+      a.timer += dt;
+      if (a.timer >= DRONE_INTERVAL) {
+        a.timer = 0;
+        fireFriendly(a, target, DRONE_DMG, 420, 0, false);
+      }
+      return;
+    }
     if (a.kind === 'wing') {
       a.timer += dt;
       if (a.timer >= 0.45) {
@@ -1199,6 +1231,9 @@
       muzzleFlash(player.x, player.y - 28, bolt ? '#e9f8ff' : '#9af6ff');
       if (!bolt) {
         particles.push({ kind: 'ring', x: player.x, y: player.y - 28, vx: 0, vy: 0, life: 0.12, max: 0.12, color: '#bffbff', r: 2, grow: 46 });
+      } else {
+        particles.push({ kind: 'ring', x: player.x, y: player.y - 28, vx: 0, vy: 0, life: 0.16, max: 0.16, color: '#d7f6ff', r: 3, grow: 70 });
+        particles.push({ kind: 'spark', x: player.x, y: player.y - 36, vx: (Math.random() - 0.5) * 40, vy: -80, life: 0.12, max: 0.12, color: '#ffffff', w: 1.6 });
       }
       if (bolt) tone(980, 0.05, 'square', 0.016);
       else sfxPlayerShot();
@@ -1303,7 +1338,7 @@
           const ay = b.bomb ? Math.max(r.y, 26) : r.y;
           if (Math.abs(b.x - a.x) < ax && Math.abs(b.y - a.y) < ay) {
             b.dead = true;
-            hurtAlly(a, b.dmg || 1);
+            hurtAlly(a, a.kind === 'drone' ? DRONE_DMG : (b.dmg || 1));
             break;
           }
         }
@@ -1443,10 +1478,10 @@
   }
 
   function drawHp(e) {
-    if (e.maxHp <= 4) {
+    if (e.maxHp <= 5) {
       const color = e.friendly ? '#8ecbff' : e.kind === 'aa' ? '#ffb15a' : e.kind === 'ground' ? '#e2c86a' : '#f27088';
-      const gap = e.maxHp > 3 ? 14 : 12;
-      const pipW = e.maxHp > 3 ? 11 : 8;
+      const gap = e.maxHp > 4 ? 12 : e.maxHp > 3 ? 14 : 12;
+      const pipW = e.maxHp > 4 ? 9 : e.maxHp > 3 ? 11 : 8;
       const pipH = e.maxHp > 3 ? 5 : 4;
       const total = e.maxHp * gap - (gap - pipW);
       const start = e.x - total / 2;
@@ -1605,14 +1640,55 @@
     ctx.restore();
   }
 
+  function drawDrone(e) {
+    const flash = e.flash > 0;
+    const body = flash ? '#ffffff' : '#e2b423';
+    const edge = '#ffe38a';
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-14, -8);
+    ctx.lineTo(14, 8);
+    ctx.moveTo(14, -8);
+    ctx.lineTo(-14, 8);
+    ctx.stroke();
+    for (const [rx, ry] of [[-14, -8], [14, -8], [-14, 8], [14, 8]]) {
+      ctx.save();
+      ctx.translate(rx, ry);
+      ctx.rotate(elapsed * 22 + rx);
+      ctx.strokeStyle = '#fff6cc';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(-6, 0);
+      ctx.lineTo(6, 0);
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.fillStyle = body;
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 8, 5.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = flash ? '#ffffff' : '#b8efff';
+    ctx.beginPath();
+    ctx.arc(0, -3, 2.1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
   function drawAllyTag(a) {
     if (a.kind === 'wing') return;
-    const text = a.kind === 'heli' ? '我方直升机' : a.kind === 'aa' ? '我方防空' : a.kind === 'ground' ? '我方地面' : a.kind === 'smallBoss' ? '我方小Boss' : a.kind === 'bigBoss' ? '我方大Boss' : '我方';
+    const text = a.kind === 'heli' ? '我方直升机' : a.kind === 'drone' ? '无人机' : a.kind === 'aa' ? '我方防空' : a.kind === 'ground' ? '我方地面' : a.kind === 'smallBoss' ? '我方小Boss' : a.kind === 'bigBoss' ? '我方大Boss' : '我方';
     ctx.save();
     ctx.font = '12px "Noto Sans SC", sans-serif';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#c7ebff';
-    const y = a.y - (a.maxHp > 4 ? 30 * (a.scale || 1) + 18 : 46);
+    const y = a.y - (a.maxHp > 5 ? 30 * (a.scale || 1) + 18 : a.maxHp > 4 ? 54 : 46);
     ctx.fillText(text, a.x, y);
     ctx.restore();
   }
@@ -1793,24 +1869,52 @@
     ctx.restore();
   }
 
-  function drawLaser(b) {
-    if (b.lightning) {
-      ctx.save();
-      ctx.strokeStyle = '#e9f8ff';
-      ctx.shadowColor = '#49b7ff';
-      ctx.shadowBlur = 14;
-      ctx.lineWidth = 2.2;
+  function drawLightning(b) {
+    const forks = [
+      { amp: 8, step: 7, color: '#f4fdff', width: 2.2, alpha: 1, phase: 0 },
+      { amp: 13, step: 6, color: '#7ecbff', width: 1.2, alpha: 0.8, phase: 1.8 },
+    ];
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.shadowColor = '#8ad7ff';
+    ctx.shadowBlur = 16;
+    ctx.globalAlpha = 0.32;
+    ctx.strokeStyle = '#49d7ff';
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(b.x, b.y + 18);
+    ctx.lineTo(b.x, b.y - 20);
+    ctx.stroke();
+    for (const fork of forks) {
+      ctx.globalAlpha = fork.alpha;
+      ctx.strokeStyle = fork.color;
+      ctx.lineWidth = fork.width;
       ctx.beginPath();
-      ctx.moveTo(b.x, b.y + 16);
       let x = b.x;
-      let y = b.y + 16;
-      for (let i = 0; i < 4; i++) {
-        x += (i % 2 === 0 ? -7 : 7);
-        y -= 8;
+      let y = b.y + 18;
+      ctx.moveTo(x, y);
+      for (let i = 0; i < 6; i++) {
+        const dir = i % 2 === 0 ? -1 : 1;
+        const jag = dir * fork.amp * (0.4 + 0.6 * Math.abs(Math.sin(elapsed * 42 + i + fork.phase)));
+        x = b.x + jag;
+        y -= fork.step;
         ctx.lineTo(x, y);
       }
       ctx.stroke();
-      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y - 20, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawLaser(b) {
+    if (b.lightning) {
+      drawLightning(b);
       return;
     }
     if (b.aa) {
@@ -1992,6 +2096,7 @@
     if (a.kind === 'ground') drawGround(a, true);
     else if (a.kind === 'aa') drawAa(a, true);
     else if (a.kind === 'heli') drawHeli(a, true);
+    else if (a.kind === 'drone') drawDrone(a);
     else if (a.kind === 'smallBoss') ship(a.x, a.y, PAL.player, a.flash, a.scale, false);
     else if (a.kind === 'bigBoss') ship(a.x, a.y, PAL.player, a.flash, a.scale, false);
     else if (a.kind === 'wing') ship(a.x, a.y, PAL.yellowShip, a.flash, a.scale || ALLY_SHIP_SCALE, false);
@@ -2163,6 +2268,7 @@
         if (a.kind === 'ground') drawGround(a, true);
         else if (a.kind === 'aa') drawAa(a, true);
         else if (a.kind === 'heli') drawHeli(a, true);
+        else if (a.kind === 'drone') drawDrone(a);
         else if (a.kind === 'smallBoss') ship(a.x, a.y, PAL.player, a.flash, a.scale, false);
         else if (a.kind === 'bigBoss') ship(a.x, a.y, PAL.player, a.flash, a.scale, false);
         else if (a.kind === 'wing') ship(a.x, a.y, PAL.yellowShip, a.flash, a.scale || ALLY_SHIP_SCALE, false);
