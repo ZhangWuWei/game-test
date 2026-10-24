@@ -1873,21 +1873,23 @@
   }
 
   function drawLightning(b) {
+    const tail = 16;
+    const reach = 36;
     const forks = [
-      { amp: 8, step: 7, color: '#f4fdff', width: 2.2, alpha: 1, phase: 0 },
-      { amp: 13, step: 6, color: '#7ecbff', width: 1.2, alpha: 0.8, phase: 1.8 },
+      { amp: 5.5, step: 8.6, color: '#f4fdff', width: 1.6, alpha: 1, phase: 0 },
+      { amp: 8, step: 7.4, color: '#7ecbff', width: 0.9, alpha: 0.75, phase: 1.8 },
     ];
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.shadowColor = '#8ad7ff';
-    ctx.shadowBlur = 16;
-    ctx.globalAlpha = 0.32;
+    ctx.shadowBlur = 12;
+    ctx.globalAlpha = 0.28;
     ctx.strokeStyle = '#49d7ff';
-    ctx.lineWidth = 7;
+    ctx.lineWidth = 4.5;
     ctx.beginPath();
-    ctx.moveTo(b.x, b.y + 18);
-    ctx.lineTo(b.x, b.y - 20);
+    ctx.moveTo(b.x, b.y + tail);
+    ctx.lineTo(b.x, b.y - reach);
     ctx.stroke();
     for (const fork of forks) {
       ctx.globalAlpha = fork.alpha;
@@ -1895,11 +1897,11 @@
       ctx.lineWidth = fork.width;
       ctx.beginPath();
       let x = b.x;
-      let y = b.y + 18;
+      let y = b.y + tail;
       ctx.moveTo(x, y);
       for (let i = 0; i < 6; i++) {
         const dir = i % 2 === 0 ? -1 : 1;
-        const jag = dir * fork.amp * (0.4 + 0.6 * Math.abs(Math.sin(elapsed * 42 + i + fork.phase)));
+        const jag = dir * fork.amp * (0.45 + 0.55 * Math.abs(Math.sin(elapsed * 42 + i + fork.phase)));
         x = b.x + jag;
         y -= fork.step;
         ctx.lineTo(x, y);
@@ -1908,9 +1910,9 @@
     }
     ctx.globalAlpha = 1;
     ctx.fillStyle = '#ffffff';
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = 8;
     ctx.beginPath();
-    ctx.arc(b.x, b.y - 20, 2.2, 0, Math.PI * 2);
+    ctx.arc(b.x, b.y - reach, 1.6, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
@@ -2008,10 +2010,10 @@
     if (firstPerson) return { x: W - 156, y: H - 50, w: 140, h: 34 };
     const w = 96;
     const h = 32;
-    let x = player.x + 42;
-    let y = player.y - 20;
-    if (x + w > W - 8) x = player.x - 42 - w;
-    x = Math.max(8, x);
+    const wingTip = 27;
+    let x = player.x + wingTip + 46;
+    let y = player.y - h / 2;
+    x = Math.min(W - 8 - w, Math.max(8, x));
     y = Math.max(8, Math.min(H - h - 8, y));
     return { x, y, w, h };
   }
