@@ -583,7 +583,7 @@
     $('pause').disabled = true;
     const title = reason === 'base' ? '基地失守了。' : '下一次，飞得更远。';
     const text = reason === 'base'
-      ? `敌方闯进视野盲区，基地血量归零。止步${LEVELS[levelIndex].name} · 得分 ${score} · 击毁 ${kills}`
+      ? `敌方闯进我方基地，基地血量归零。止步${LEVELS[levelIndex].name} · 得分 ${score} · 击毁 ${kills}`
       : `止步${LEVELS[levelIndex].name} · 得分 ${score} · 击毁 ${kills} · 存活 ${formatTime(elapsed)}`;
     showOverlay('EVERY END IS A NEW BEGINNING', title, text, '再次出击', '按 Enter 重新开始');
     tone(120, 0.6, 'sawtooth', 0.045);
@@ -2235,7 +2235,7 @@
     ctx.font = '13px "Noto Sans SC", sans-serif';
     ctx.textAlign = 'left';
     ctx.fillStyle = baseFlash > 0 ? '#ffd0d8' : '#b7d4ff';
-    ctx.fillText('视野盲区', 18, BASE_LINE + 22);
+    ctx.fillText('我方基地', 18, BASE_LINE + 22);
 
     if (mode === 'ready') {
       ship(W / 2, H - 100, PAL.player, 0, 1.1, false);
