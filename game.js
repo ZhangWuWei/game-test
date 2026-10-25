@@ -125,6 +125,107 @@
 
   try { best = Number(localStorage.getItem('starbound-best')) || 0; } catch {}
 
+  const SHOP_CATS = [
+    { id: 'ship', name: '机体' },
+    { id: 'ammo', name: '弹药' },
+    { id: 'mode', name: '玩法' },
+    { id: 'item', name: '道具' },
+  ];
+  const CATALOG = [
+    { id: 'hull', cat: 'ship', name: '复合装甲', desc: '机体上限 +2。可以买 3 次。没买的时候仍是 26。', price: [40, 70, 120], max: 3 },
+    { id: 'engine', cat: 'ship', name: '推进引擎', desc: '移动快 12%。可以买 3 次。', price: [35, 60, 100], max: 3 },
+    { id: 'cooler', cat: 'ship', name: '冷却核心', desc: '自动射击更快一点。可以买 3 次。', price: [45, 80, 130], max: 3 },
+    { id: 'wing', cat: 'ship', name: '翼刀', desc: '主炮两侧各多打出一发激光。', price: [90], max: 1 },
+    { id: 'bombBay', cat: 'ammo', name: '炸弹弹舱', desc: '开局炸弹 +10。可以买 3 次。没买的时候仍是 50。', price: [30, 55, 90], max: 3 },
+    { id: 'auroraCell', cat: 'ammo', name: '极光电池', desc: '每关极光 +8。可以买 3 次。没买的时候仍是 30。', price: [30, 55, 90], max: 3 },
+    { id: 'spark', cat: 'ammo', name: '开局雷电', desc: '第 1 关一开始就带着 6 秒雷电。', price: [70], max: 1 },
+    { id: 'nozzle', cat: 'ammo', name: '开局喷火', desc: '第 1 关一开始就喷火 4 秒。', price: [70], max: 1 },
+    { id: 'standard', cat: 'mode', name: '标准突击', desc: '原来的十关突击。', price: [0], max: 1, mode: true },
+    { id: 'blitz', cat: 'mode', name: '速攻航线', desc: '敌机更快，击毁得到的星币是 1.5 倍。', price: [60], max: 1, mode: true },
+    { id: 'bastion', cat: 'mode', name: '钢铁壁垒', desc: '这一局基地血量变成 25，自己的移动稍慢。', price: [80], max: 1, mode: true },
+    { id: 'bombSpec', cat: 'mode', name: '炸弹专精', desc: '开局再加 20 颗炸弹，炸弹伤害 +1，主炮变慢。', price: [75], max: 1, mode: true },
+    { id: 'auroraSpec', cat: 'mode', name: '极光专精', desc: '每关极光 +15，极光伤害变成 4，主炮变慢。', price: [75], max: 1, mode: true },
+    { id: 'endless', cat: 'mode', name: '无尽余波', desc: '打完十关不结束，第 10 关一波接一波，越来越快。', price: [120], max: 1, mode: true },
+    { id: 'repair', cat: 'item', name: '维修包', desc: '立刻回复 8 滴血，不超过上限。', price: [16], stack: 9 },
+    { id: 'weld', cat: 'item', name: '基地焊枪', desc: '基地立刻 +5，不超过这一局的上限。', price: [18], stack: 9 },
+    { id: 'freeze', cat: 'item', name: '冻结弹', desc: '敌方停住 4 秒，自己还能动、还能开枪。', price: [22], stack: 9 },
+    { id: 'strike', cat: 'item', name: '轨道轰炸', desc: '画面上每个敌人立刻扣 4 血。', price: [28], stack: 9 },
+    { id: 'guard', cat: 'item', name: '紧急护盾', desc: '接下来 3 次受伤不扣血。', price: [24], stack: 6 },
+    { id: 'kit', cat: 'item', name: '备用弹药', desc: '立刻再得到 8 颗炸弹和 6 发极光。', price: [20], stack: 9 },
+  ];
+  let shopCat = 'ship';
+  let shopHeld = false;
+  let endlessRound = 0;
+  let freezeLeft = 0;
+  let guardHits = 0;
+  let wallet = { coins: 80, ranks: { standard: 1 }, mode: 'standard', bag: {} };
+  try {
+    const saved = JSON.parse(localStorage.getItem('starbound-shop') || '');
+    if (saved && typeof saved.coins === 'number') {
+      wallet = {
+        coins: saved.coins,
+        ranks: Object.assign({ standard: 1 }, saved.ranks || {}),
+        mode: saved.mode || 'standard',
+        bag: saved.bag || {},
+      };
+    }
+  } catch {}
+
+  function saveWallet() {
+    try { localStorage.setItem('starbound-shop', JSON.stringify(wallet)); } catch {}
+  }
+  function rankOf(id) {
+    return wallet.ranks[id] || 0;
+  }
+  let runPerks = null;
+  function computePerks() {
+    const modeId = wallet.mode || 'standard';
+    const hull = rankOf('hull');
+    const engine = rankOf('engine');
+    const cooler = rankOf('cooler');
+    let fireScale = 1 - cooler * 0.08;
+    let bombs = rankOf('bombBay') * 10;
+    let aurora = rankOf('auroraCell') * 8;
+    let bombDmg = PLAYER_BOMB_DMG;
+    let auroraDmg = AURORA_DMG;
+    let speed = 1 + engine * 0.12;
+    let enemy = 1 + (modeId === 'endless' ? endlessRound * 0.08 : 0);
+    let base = 0;
+    let coin = 1;
+    if (modeId === 'blitz') { enemy *= 1.4; coin = 1.5; }
+    if (modeId === 'bastion') { base = 6; speed *= 0.9; }
+    if (modeId === 'bombSpec') { bombs += 20; bombDmg += 1; fireScale *= 1.25; }
+    if (modeId === 'auroraSpec') { aurora += 15; auroraDmg += 1; fireScale *= 1.2; }
+    if (modeId === 'endless') coin = 1.2;
+    return {
+      maxHp: PLAYER_MAX + hull * 2,
+      speed,
+      fire: Math.max(0.08, 0.16 * fireScale),
+      bombs,
+      aurora,
+      bombDmg,
+      auroraDmg,
+      baseMax: BASE_MAX + base,
+      lightning: rankOf('spark') ? 6 : 0,
+      flame: rankOf('nozzle') ? 4 : 0,
+      wing: rankOf('wing') > 0,
+      enemy,
+      coin,
+      mode: modeId,
+    };
+  }
+  function perks() {
+    if (runPerks && (mode === 'playing' || mode === 'paused' || mode === 'levelclear')) return runPerks;
+    return computePerks();
+  }
+  function addCoins(n) {
+    wallet.coins += Math.max(0, n | 0);
+    saveWallet();
+  }
+  function modeTitle(id) {
+    return (CATALOG.find(g => g.id === id) || {}).name || '标准突击';
+  }
+
   const stars = Array.from({ length: 150 }, () => ({
     x: Math.random() * W,
     y: Math.random() * H,
@@ -247,9 +348,11 @@
 
   function syncHUD() {
     const lv = LEVELS[levelIndex];
-    const hp = player?.hp ?? PLAYER_MAX;
+    const maxHp = perks().maxHp;
+    const hp = Math.min(maxHp, player?.hp ?? maxHp);
     $('hp').textContent = hp;
-    $('health-bar').innerHTML = Array.from({ length: PLAYER_MAX }, (_, i) => `<i class="${i < hp ? '' : 'empty'}"></i>`).join('');
+    if ($('hp-max')) $('hp-max').textContent = ` / ${maxHp}`;
+    $('health-bar').innerHTML = Array.from({ length: maxHp }, (_, i) => `<i class="${i < hp ? '' : 'empty'}"></i>`).join('');
     $('health-bar').classList.toggle('low', hp <= 5);
     $('score').textContent = String(score).padStart(6, '0');
     $('kills').innerHTML = `${kills} <small>个</small>`;
@@ -263,8 +366,14 @@
     $('flame').textContent = flame > 0 ? `${flame.toFixed(1)}s` : '—';
     $('bombs').textContent = String(bombStock);
     $('aurora').textContent = String(auroraStock);
+    const baseMax = perks().baseMax;
     $('base-hp').textContent = baseHp;
-    $('base-bar').innerHTML = Array.from({ length: BASE_MAX }, (_, i) => `<i class="${i < baseHp ? '' : 'empty'}"></i>`).join('');
+    if ($('base-max')) $('base-max').textContent = ` / ${baseMax}`;
+    $('base-bar').innerHTML = Array.from({ length: baseMax }, (_, i) => `<i class="${i < baseHp ? '' : 'empty'}"></i>`).join('');
+    if ($('coins')) $('coins').textContent = String(wallet.coins);
+    if ($('home-coins')) $('home-coins').textContent = `星币 ${wallet.coins}`;
+    if ($('shop-coins')) $('shop-coins').textContent = `星币 ${wallet.coins}`;
+    if ($('mode-name')) $('mode-name').textContent = modeTitle(wallet.mode);
     $('base-bar').classList.toggle('low', baseHp <= 6);
   }
 
@@ -473,10 +582,11 @@
   }
 
   function beginWave() {
+    runPerks = computePerks();
     const lv = LEVELS[levelIndex];
     resetWaveFlags();
     itemPlanNow = levelIndex === LEVELS.length - 1 ? ITEM_PLANS.final : ITEM_PLANS.normal;
-    player.hp = PLAYER_MAX;
+    player.hp = perks().maxHp;
     player.x = W / 2;
     player.y = H - 95;
     const opening = Math.min(lv.planes || 0, 3);
@@ -499,7 +609,12 @@
     $('pause').disabled = false;
     $('pause').textContent = 'Ⅱ';
     $('pause').setAttribute('aria-label', '暂停游戏');
-    auroraStock = AURORA_COUNT;
+    const perk = perks();
+    auroraStock = AURORA_COUNT + perk.aurora;
+    if (levelIndex === 0) {
+      lightning = perk.lightning;
+      flame = perk.flame;
+    }
     syncHUD();
     showBanner(bannerText(lv));
     tone(550, 0.25);
@@ -512,17 +627,26 @@
     elapsed = 0;
     shipSelected = true;
     moveTarget = null;
-    bombStock = START_BOMBS;
-    auroraStock = AURORA_COUNT;
-    baseHp = BASE_MAX;
+    endlessRound = 0;
+    freezeLeft = 0;
+    guardHits = 0;
+    const perk = perks();
+    bombStock = START_BOMBS + perk.bombs;
+    auroraStock = AURORA_COUNT + perk.aurora;
+    baseHp = perk.baseMax;
     baseFlash = 0;
-    player = { x: W / 2, y: H - 95, hp: PLAYER_MAX };
+    player = { x: W / 2, y: H - 95, hp: perk.maxHp };
     firstPerson = false;
     beginWave();
+    renderTray();
   }
 
   function nextLevel() {
     if (levelIndex >= LEVELS.length - 1) {
+      if ((wallet.mode || 'standard') === 'endless') {
+        beginWave();
+        return;
+      }
       victory();
       return;
     }
@@ -550,7 +674,18 @@
 
   function levelClear() {
     tone(660, 0.22);
+    addCoins(25);
     if (levelIndex >= LEVELS.length - 1) {
+      if ((wallet.mode || 'standard') === 'endless') {
+        endlessRound++;
+        mode = 'levelclear';
+        keys.clear();
+        gesture = null;
+        $('status').textContent = '余波';
+        $('pause').disabled = true;
+        showOverlay('ENDLESS', `第10关余波 ${endlessRound}`, '敌机变得更快。星币继续算。', '进入下一波', '按 Enter 继续');
+        return;
+      }
       victory();
       return;
     }
@@ -572,7 +707,8 @@
     moveTarget = null;
     $('status').textContent = '任务完成';
     $('pause').disabled = true;
-    showOverlay('MISSION COMPLETE', '航线守住了。', `${LEVELS.length}关通过 · 得分 ${score} · 击毁 ${kills} · 存活 ${formatTime(elapsed)}`, '再飞一次', '按 Enter 重新开始');
+    addCoins(50);
+    showOverlay('MISSION COMPLETE', '航线守住了。', `${LEVELS.length}关通过 · 得分 ${score} · 击毁 ${kills} · 存活 ${formatTime(elapsed)} · 星币 ${wallet.coins}`, '再飞一次', '按 Enter 重新开始');
     burst(W / 2, H / 2, '#ffd15c', 40);
     burst(W / 3, H / 3, '#79ddff', 24);
     tone(720, 0.35);
@@ -624,6 +760,13 @@
 
   function damage(amount) {
     if (mode !== 'playing' || !player) return;
+    if (guardHits > 0) {
+      guardHits--;
+      hitFlash = 0.08;
+      showBanner(`护盾挡住了，还剩 ${guardHits} 次`);
+      syncHUD();
+      return;
+    }
     player.hp = Math.max(0, player.hp - amount);
     hitFlash = 0.18;
     boom(player.x, player.y, '#65bdff', amount >= 3 ? 1.15 : 0.7);
@@ -642,6 +785,7 @@
     e.hp = 0;
     const points = { plane: 100, ground: 80, aa: 140, heli: 120, baozi: 600, smallBoss: 2000, bigBoss: 4000 };
     score += points[e.kind] || 100;
+    addCoins(Math.max(1, Math.round(((points[e.kind] || 100) / 25) * perks().coin)));
     kills++;
     if (e.kind === 'plane') killedPlanes++;
     if (e.kind === 'ground') killedGround++;
@@ -812,7 +956,7 @@
   function moveCraft(e, dt) {
     e.flash = Math.max(0, e.flash - dt);
     if (e.kind === 'plane') {
-      e.y += (e.speed + Math.min(elapsed * 0.25, 26)) * dt;
+      e.y += (e.speed + Math.min(elapsed * 0.25, 26)) * dt * perks().enemy;
       e.x += Math.sin(elapsed * 1.3 + e.phase) * 23 * dt;
       e.x = Math.max(28, Math.min(W - 28, e.x));
       return;
@@ -878,7 +1022,7 @@
     e.x = Math.max(36, Math.min(W - 36, e.x));
     if (!e.friendly && e.kind !== 'plane' && e.y < BASE_LINE - 6) {
       const sink = e.kind === 'bigBoss' ? 22 : e.kind === 'smallBoss' ? 26 : e.kind === 'baozi' ? 18 : 14;
-      e.y += sink * dt;
+      e.y += sink * dt * perks().enemy;
     }
   }
 
@@ -1109,7 +1253,7 @@
       burst(it.x, it.y, '#ffd15c', 18);
       tone(640, 0.18);
     } else if (it.type === 'green') {
-      if (player) player.hp = Math.min(PLAYER_MAX, player.hp + HEAL_AMOUNT);
+      if (player) player.hp = Math.min(perks().maxHp, player.hp + HEAL_AMOUNT);
       burst(it.x, it.y, '#5dffa0', 16);
       tone(520, 0.16);
     } else if (it.type === 'pink') {
@@ -1128,7 +1272,7 @@
       tone(420, 0.2, 'sawtooth', 0.04);
       noiseBurst(0.18, 900, 0.06);
     } else if (it.type === 'black') {
-      baseHp = Math.min(BASE_MAX, baseHp + BASE_HEAL);
+      baseHp = Math.min(perks().baseMax, baseHp + BASE_HEAL);
       burst(it.x, it.y, '#e8e8e8', 18);
       tone(360, 0.16, 'square', 0.03);
     } else if (it.type === 'red') {
@@ -1150,7 +1294,7 @@
       vx: Math.cos(angle) * 460,
       vy: Math.sin(angle) * 460,
       enemy: false,
-      dmg: AURORA_DMG,
+      dmg: perks().auroraDmg,
       aurora: true,
       homing: true,
       target,
@@ -1176,7 +1320,7 @@
       enemy: false,
       bomb: true,
       homing: true,
-      dmg: PLAYER_BOMB_DMG,
+      dmg: perks().bombDmg,
       target,
       age: 0,
       dead: false,
@@ -1293,13 +1437,14 @@
       player.y = moveTarget.y;
     } else if (usingKeys) {
       const len = Math.hypot(mx, my) || 1;
-      player.x += mx / len * 300 * dt;
-      player.y += my / len * 300 * dt;
+      const move = 300 * perks().speed;
+      player.x += mx / len * move * dt;
+      player.y += my / len * move * dt;
     } else if (shipSelected && moveTarget) {
       const dx = moveTarget.x - player.x;
       const dy = moveTarget.y - player.y;
       const d = Math.hypot(dx, dy);
-      const step = Math.min(d, 520 * dt);
+      const step = Math.min(d, 520 * perks().speed * dt);
       if (d > 3) {
         player.x += dx / d * step;
         player.y += dy / d * step;
@@ -1319,13 +1464,14 @@
     }
 
     fireClock += dt;
-    if (fireClock >= 0.16) {
-      fireClock %= 0.16;
+    const fireGap = perks().fire;
+    if (fireClock >= fireGap) {
+      fireClock %= fireGap;
       const bolt = lightning > 0;
-      lasers.push({
-        x: player.x,
+      const shot = (x, vx) => lasers.push({
+        x,
         y: player.y - 28,
-        vx: 0,
+        vx,
         vy: -610,
         enemy: false,
         dmg: bolt ? LIGHTNING_DMG : 1,
@@ -1333,6 +1479,11 @@
         playerShot: !bolt,
         dead: false,
       });
+      shot(player.x, 0);
+      if (perks().wing && !bolt) {
+        shot(player.x - 18, -70);
+        shot(player.x + 18, 70);
+      }
       muzzleFlash(player.x, player.y - 28, bolt ? '#e9f8ff' : '#9af6ff');
       if (!bolt) {
         particles.push({ kind: 'ring', x: player.x, y: player.y - 28, vx: 0, vy: 0, life: 0.14, max: 0.14, color: '#bffbff', r: 3, grow: 62 });
@@ -1372,10 +1523,13 @@
     }
     items = items.filter(it => !it.taken);
 
+    if (freezeLeft > 0) freezeLeft = Math.max(0, freezeLeft - dt);
     for (const e of enemies) {
       if (e.dead) continue;
-      moveCraft(e, dt);
-      weapons(e, dt);
+      if (freezeLeft <= 0) {
+        moveCraft(e, dt);
+        weapons(e, dt);
+      }
     }
     for (const a of allies) {
       if (a.dead) continue;
@@ -2675,7 +2829,215 @@
     return !!(home && !home.classList.contains('hidden'));
   }
 
+  function shopOpen() {
+    const el = $('shop');
+    return !!(el && !el.classList.contains('hidden'));
+  }
+
+  function catalogItem(id) {
+    return CATALOG.find(g => g.id === id);
+  }
+
+  function shopSay(text) {
+    const note = $('shop-note');
+    if (note) note.textContent = text;
+    showBanner(text);
+  }
+
+  function shopCard(g) {
+    const owned = rankOf(g.id);
+    const bag = wallet.bag[g.id] || 0;
+    let meta = '';
+    let buttons = '';
+    if (g.mode) {
+      const unlocked = owned >= 1 || g.price[0] === 0;
+      const using = wallet.mode === g.id;
+      meta = using ? '这一局使用中' : unlocked ? '已拥有' : '未解锁';
+      buttons = unlocked
+        ? `<button type="button" data-equip="${g.id}" ${using ? 'disabled' : ''}>${using ? '使用中' : '选用'}</button>`
+        : `<button type="button" data-buy="${g.id}">购买 ${g.price[0]} 星币</button>`;
+    } else if (g.stack) {
+      const full = bag >= g.stack;
+      meta = `背包 ${bag} / ${g.stack}`;
+      buttons = `<button type="button" data-buy="${g.id}" ${full ? 'disabled' : ''}>${full ? '已满' : `购买 ${g.price[0]} 星币`}</button><button type="button" data-use="${g.id}" ${bag ? '' : 'disabled'}>使用</button>`;
+    } else {
+      const max = g.max || 1;
+      const full = owned >= max;
+      const price = g.price[Math.min(owned, g.price.length - 1)];
+      meta = `等级 ${owned} / ${max}`;
+      buttons = `<button type="button" data-buy="${g.id}" ${full ? 'disabled' : ''}>${full ? '已满级' : `升级 ${price} 星币`}</button>`;
+    }
+    return `<article class="shop-card"><div class="shop-card-top"><h3>${g.name}</h3><span class="shop-meta">${meta}</span></div><p>${g.desc}</p><div class="shop-actions">${buttons}</div></article>`;
+  }
+
+  function renderShop() {
+    const tabs = $('shop-tabs');
+    const grid = $('shop-grid');
+    if (tabs) {
+      tabs.innerHTML = SHOP_CATS.map(c => `<button type="button" data-cat="${c.id}" class="${c.id === shopCat ? 'on' : ''}">${c.name}</button>`).join('');
+    }
+    if (grid) grid.innerHTML = CATALOG.filter(g => g.cat === shopCat).map(shopCard).join('');
+    syncHUD();
+    renderTray();
+  }
+
+  function renderTray() {
+    const tray = $('quick-tray');
+    if (!tray) return;
+    const owned = CATALOG.filter(g => g.stack && (wallet.bag[g.id] || 0) > 0);
+    tray.innerHTML = owned.map(g => `<button type="button" data-use="${g.id}">${g.name} ×${wallet.bag[g.id]}</button>`).join('');
+    tray.classList.toggle('show', owned.length > 0 && !homeOpen() && !shopOpen());
+  }
+
+  function openShop() {
+    const el = $('shop');
+    if (!el) return;
+    if (shopOpen()) {
+      closeShop();
+      return;
+    }
+    el.classList.remove('hidden');
+    el.hidden = false;
+    renderShop();
+    if (mode === 'playing') {
+      shopHeld = true;
+      togglePause();
+    }
+  }
+
+  function closeShop() {
+    const el = $('shop');
+    if (el) {
+      el.classList.add('hidden');
+      el.hidden = true;
+    }
+    const resume = shopHeld && mode === 'paused';
+    shopHeld = false;
+    renderTray();
+    if (resume) togglePause();
+  }
+
+  function buyGood(id) {
+    const g = catalogItem(id);
+    if (!g) return;
+    if (g.mode) {
+      if (rankOf(id) >= 1) {
+        equipMode(id);
+        return;
+      }
+      const price = g.price[0] || 0;
+      if (wallet.coins < price) {
+        shopSay('星币不够。');
+        return;
+      }
+      wallet.coins -= price;
+      wallet.ranks[id] = 1;
+      wallet.mode = id;
+      saveWallet();
+      tone(720, 0.08, 'square', 0.03);
+      shopSay(`买下了${g.name}。下一关生效。`);
+      renderShop();
+      return;
+    }
+    if (g.stack) {
+      const have = wallet.bag[id] || 0;
+      if (have >= g.stack) {
+        shopSay('这个道具已经带满了。');
+        return;
+      }
+      const price = g.price[0];
+      if (wallet.coins < price) {
+        shopSay('星币不够。');
+        return;
+      }
+      wallet.coins -= price;
+      wallet.bag[id] = have + 1;
+      saveWallet();
+      tone(720, 0.08, 'square', 0.03);
+      shopSay(`买下了${g.name}。开战之后可以拿出来用。`);
+      renderShop();
+      return;
+    }
+    const owned = rankOf(id);
+    const max = g.max || 1;
+    if (owned >= max) {
+      shopSay('已经满级。');
+      return;
+    }
+    const price = g.price[Math.min(owned, g.price.length - 1)];
+    if (wallet.coins < price) {
+      shopSay('星币不够。');
+      return;
+    }
+    wallet.coins -= price;
+    wallet.ranks[id] = owned + 1;
+    saveWallet();
+    tone(720, 0.08, 'square', 0.03);
+    shopSay(`买下了${g.name}。下一关生效。`);
+    renderShop();
+  }
+
+  function equipMode(id) {
+    const g = catalogItem(id);
+    if (!g || !g.mode) return;
+    if (rankOf(id) < 1 && g.price[0] > 0) {
+      shopSay('先购买这个玩法。');
+      return;
+    }
+    wallet.mode = id;
+    if (!wallet.ranks[id]) wallet.ranks[id] = 1;
+    saveWallet();
+    shopSay(`下一关使用${g.name}。`);
+    renderShop();
+  }
+
+  function useGood(id) {
+    const g = catalogItem(id);
+    if (!g || !g.stack) return;
+    const have = wallet.bag[id] || 0;
+    if (have <= 0) {
+      shopSay('背包里没有这个道具。');
+      return;
+    }
+    if (mode !== 'playing' && mode !== 'paused') {
+      shopSay('开战后再使用。');
+      return;
+    }
+    if (!player && id !== 'weld' && id !== 'freeze' && id !== 'strike' && id !== 'guard' && id !== 'kit') return;
+    if (id === 'repair' && player.hp >= perks().maxHp) {
+      shopSay('血是满的。');
+      return;
+    }
+    if (id === 'weld' && baseHp >= perks().baseMax) {
+      shopSay('基地血是满的。');
+      return;
+    }
+    if (id === 'repair') player.hp = Math.min(perks().maxHp, player.hp + 8);
+    else if (id === 'weld') baseHp = Math.min(perks().baseMax, baseHp + 5);
+    else if (id === 'freeze') freezeLeft = Math.max(freezeLeft, 4);
+    else if (id === 'strike') {
+      for (const e of enemies.slice()) {
+        if (e.dead) continue;
+        e.hp -= 4;
+        e.flash = 0.12;
+        if (e.hp <= 0) destroyEnemy(e);
+      }
+    } else if (id === 'guard') guardHits += 3;
+    else if (id === 'kit') {
+      bombStock += 8;
+      auroraStock += 6;
+    } else return;
+    wallet.bag[id] = have - 1;
+    if (wallet.bag[id] <= 0) delete wallet.bag[id];
+    saveWallet();
+    tone(540, 0.1, 'square', 0.03);
+    shopSay(`使用了${g.name}。`);
+    syncHUD();
+    renderShop();
+  }
+
   function beginGame() {
+    if (shopOpen()) return;
     const home = $('home');
     const fromHome = homeOpen();
     if (home) {
@@ -2687,6 +3049,7 @@
   }
 
   function beginFromOverlay() {
+    if (shopOpen()) return;
     if (mode === 'paused') togglePause();
     else if (mode === 'levelclear') nextLevel();
     else beginGame();
@@ -2700,7 +3063,7 @@
   const homeEl = $('home');
   if (homeEl) {
     homeEl.addEventListener('pointerdown', e => {
-      if (e.target.closest && e.target.closest('#sound, #pause, a')) return;
+      if (e.target.closest && e.target.closest('#sound, #pause, a, #shop-open, #shop, .home-shop')) return;
       e.preventDefault();
       e.stopPropagation();
       beginGame();
@@ -2727,6 +3090,11 @@
   window.addEventListener('keydown', () => { if (soundOn) ensureAudio(); });
 
   window.addEventListener('keydown', e => {
+    if (shopOpen()) {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Enter', 'Escape'].includes(e.code)) e.preventDefault();
+      if (e.code === 'Escape') closeShop();
+      return;
+    }
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Enter'].includes(e.code)) e.preventDefault();
     if (e.repeat) return;
     if (e.code === 'Enter' || ((homeOpen() || mode === 'ready') && e.code === 'Space')) {
@@ -2767,6 +3135,7 @@
     return !!(e.target && e.target.closest && e.target.closest('button, a, input, textarea, select'));
   }
   function beginPush(e) {
+    if (shopOpen()) return;
     if ((e.pointerType === 'mouse' && e.button !== 0) || onUiControl(e)) return;
     if ((homeOpen() || mode === 'ready') && overArena(e)) beginGame();
     if (!player || !overArena(e)) return;
@@ -2866,8 +3235,31 @@
     canvas.style.cursor = hitViewButton(p) && (mode === 'playing' || mode === 'paused') ? 'pointer' : '';
   });
 
+  document.addEventListener('click', e => {
+    const el = e.target.closest('#shop-open, #home-shop, #shop-close, [data-cat], [data-buy], [data-equip], [data-use]');
+    if (!el) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (el.id === 'shop-open' || el.id === 'home-shop') openShop();
+    else if (el.id === 'shop-close') closeShop();
+    else if (el.dataset.cat) {
+      shopCat = el.dataset.cat;
+      renderShop();
+    } else if (el.dataset.buy) buyGood(el.dataset.buy);
+    else if (el.dataset.equip) equipMode(el.dataset.equip);
+    else if (el.dataset.use) useGood(el.dataset.use);
+  });
+  const shopEl = $('shop');
+  if (shopEl) {
+    shopEl.addEventListener('pointerdown', e => e.stopPropagation());
+    shopEl.addEventListener('click', e => {
+      if (e.target === shopEl) closeShop();
+    });
+  }
+
   renderIntel();
   syncHUD();
+  renderTray();
   resize();
   requestAnimationFrame(frame);
 })();
