@@ -57,7 +57,6 @@
   const HELI_INTERVAL = 2;
   const HELI_ENEMY_COUNT = 2;
   const HELI_ALLY_COUNT = 1;
-  const CAT_HP = 11;
   const CAT_BITE = 5;
   const PLAYER_MAX = 26;
   const BASE_MAX = 19;
@@ -422,7 +421,7 @@
   }
 
   function describeLevel(lv) {
-    const cat = lv === LEVELS[LEVELS.length - 1] ? ` 另有一只猫，${CAT_HP} 滴血，出现后随机咬一艘敌方或我方战舰，更常咬敌方，咬中扣 ${CAT_BITE} 血，不计入过关。` : '';
+    const cat = lv === LEVELS[LEVELS.length - 1] ? ` 另有一只玄凤鹦鹉，不受伤害，不会攻击我方。它会去啄敌方战舰，每啄一次扣 ${CAT_BITE} 血，不计入过关。` : '';
     return `<b>${lv.name}</b>：${roster(lv)}，同时有地面炮台 ${lv.ground}，敌方防空炮台 ${ENEMY_AA_COUNT}，敌方直升机 ${HELI_ENEMY_COUNT}，我方直升机 ${HELI_ALLY_COUNT}。${cat}`;
   }
 
@@ -527,9 +526,9 @@
   }
 
   function spawnCat() {
-    enemies.push(makeCraft('cat', 140 + Math.random() * (W - 280), 120, {
-      hp: CAT_HP,
-      maxHp: CAT_HP,
+    enemies.push(makeCraft('bird', 140 + Math.random() * (W - 280), 120, {
+      hp: 1,
+      maxHp: 1,
       scale: 1.05,
       biteTimer: 0,
       phase: Math.random() * Math.PI * 2,
@@ -811,7 +810,7 @@
   function watchBase() {
     if (mode !== 'playing') return;
     for (const e of enemies) {
-      if (e.dead || e.friendly || e.breached || e.kind === 'cat') continue;
+      if (e.dead || e.friendly || e.breached || e.kind === 'bird') continue;
       if (e.y >= BASE_LINE) hurtBase(e);
     }
   }
@@ -1028,7 +1027,7 @@
 
   function hitRadius(e) {
     if (e.kind === 'drone') return { x: 16, y: 14 };
-    if (e.kind === 'cat') return { x: 30, y: 24 };
+    if (e.kind === 'bird') return { x: 42, y: 26 };
     if (e.kind === 'ground' || e.kind === 'aa') return { x: 30, y: 24 };
     const s = e.scale || 1;
     return { x: 22 * s, y: 22 * s };
@@ -1038,32 +1037,17 @@
     return enemies.filter(e => e.kind === kind && !e.dead).length;
   }
 
-  function catShips() {
-    const foes = enemies.filter(e => !e.dead && e.hp > 0 && e.kind !== 'cat' && ['plane', 'heli', 'baozi', 'smallBoss', 'bigBoss'].includes(e.kind));
-    const friends = allies.filter(a => !a.dead && a.hp > 0 && ['wing', 'heli', 'drone', 'smallBoss', 'bigBoss'].includes(a.kind));
-    if (player && player.hp > 0) friends.push(player);
-    return { foes, friends };
-  }
-
   function pickCatPrey() {
-    const { foes, friends } = catShips();
-    const side = foes.length && (!friends.length || Math.random() < 0.75) ? foes : friends.length ? friends : foes;
-    if (!side.length) return null;
-    return side[Math.floor(Math.random() * side.length)];
+    const foes = enemies.filter(e => !e.dead && e.hp > 0 && e.kind !== 'bird' && ['plane', 'heli', 'baozi', 'smallBoss', 'bigBoss'].includes(e.kind));
+    if (!foes.length) return null;
+    return foes[Math.floor(Math.random() * foes.length)];
   }
 
   function catBite(prey) {
-    burst(prey.x, prey.y, '#ffd7b0', 12);
+    if (!prey || prey === player || prey.friendly || prey.kind === 'bird') return;
+    burst(prey.x, prey.y, '#ffe08a', 12);
     sfxImpact();
-    showBanner('猫咬了一口');
-    if (prey === player) {
-      damage(CAT_BITE);
-      return;
-    }
-    if (prey.friendly) {
-      hurtAlly(prey, CAT_BITE);
-      return;
-    }
+    showBanner('玄凤鹦鹉啄了一下');
     prey.hp -= CAT_BITE;
     prey.flash = 0.14;
     if (prey.hp <= 0) destroyEnemy(prey);
@@ -1071,7 +1055,7 @@
 
   function moveCraft(e, dt) {
     e.flash = Math.max(0, e.flash - dt);
-    if (e.kind === 'cat') {
+    if (e.kind === 'bird') {
       const catDash = (tx, ty, speed) => {
         const dx = tx - e.x;
         const dy = ty - e.y;
@@ -1095,7 +1079,7 @@
         return;
       }
       e.biteTimer = (e.biteTimer || 0) + dt;
-      const preyGone = !e.prey || (e.prey === player ? !player || player.hp <= 0 : e.prey.dead || e.prey.hp <= 0);
+      const preyGone = !e.prey || e.prey.dead || e.prey.hp <= 0 || e.prey.friendly || e.prey === player;
       if (preyGone || e.biteTimer > 2.4) {
         e.prey = pickCatPrey();
         e.biteTimer = 0;
@@ -1105,9 +1089,8 @@
       const ty = prey ? prey.y : e.wander.y;
       const dist = catDash(tx, ty, 340);
       e.x = Math.max(36, Math.min(W - 36, e.x));
-      const low = prey === player ? H - 64 : BASE_LINE - 46;
-      e.y = Math.max(52, Math.min(low, e.y));
-      if (prey && dist < 40) {
+      e.y = Math.max(52, Math.min(BASE_LINE - 46, e.y));
+      if (prey && dist < 48) {
         catBite(prey);
         e.prey = null;
         e.biteWait = 0.7;
@@ -1218,7 +1201,7 @@
       });
     }
     for (const e of enemies) {
-      if (e.dead || e.hp <= 0 || e.scorched === flameSerial || !inFlame(e)) continue;
+      if (e.dead || e.hp <= 0 || e.kind === 'bird' || e.scorched === flameSerial || !inFlame(e)) continue;
       e.scorched = flameSerial;
       e.hp -= FLAME_DMG;
       e.flash = 0.14;
@@ -1232,7 +1215,7 @@
     let best = null;
     let bestD = Infinity;
     for (const e of enemies) {
-      if (e.dead) continue;
+      if (e.dead || e.kind === 'bird') continue;
       const d = (e.x - from.x) ** 2 + (e.y - from.y) ** 2;
       if (d < bestD) { best = e; bestD = d; }
     }
@@ -1785,7 +1768,7 @@
         }
       } else {
         for (const e of enemies) {
-          if (e.dead || e.hp <= 0) continue;
+          if (e.dead || e.hp <= 0 || e.kind === 'bird') continue;
           const r = hitRadius(e);
           const ex = b.bomb ? Math.max(r.x, 26) : r.x;
           const ey = b.bomb ? Math.max(r.y, 26) : r.y;
@@ -1971,7 +1954,7 @@
     if (!player || !perks().scythe) return;
     const pts = scytheOffsets().map(p => ({ x: player.x + p.x, y: player.y + p.y }));
     for (const e of enemies) {
-      if (e.dead || e.hp <= 0) continue;
+      if (e.dead || e.hp <= 0 || e.kind === 'bird') continue;
       e.scytheCd = Math.max(0, (e.scytheCd || 0) - dt);
       if (e.scytheCd > 0) continue;
       const r = hitRadius(e);
@@ -2024,15 +2007,15 @@
   }
 
   function drawHp(e) {
-    if (e.maxHp <= 5 || e.kind === 'cat') {
-      const color = e.kind === 'cat' ? '#f3b15a' : e.friendly ? '#8ecbff' : e.kind === 'aa' ? '#ffb15a' : e.kind === 'ground' ? '#e2c86a' : '#f27088';
-      const many = e.kind === 'cat';
-      const gap = many ? 7 : e.maxHp > 4 ? 12 : e.maxHp > 3 ? 14 : 12;
-      const pipW = many ? 5 : e.maxHp > 4 ? 9 : e.maxHp > 3 ? 11 : 8;
-      const pipH = many ? 4 : e.maxHp > 3 ? 5 : 4;
+    if (e.kind === 'bird') return;
+    if (e.maxHp <= 5) {
+      const color = e.friendly ? '#8ecbff' : e.kind === 'aa' ? '#ffb15a' : e.kind === 'ground' ? '#e2c86a' : '#f27088';
+      const gap = e.maxHp > 4 ? 12 : e.maxHp > 3 ? 14 : 12;
+      const pipW = e.maxHp > 4 ? 9 : e.maxHp > 3 ? 11 : 8;
+      const pipH = e.maxHp > 3 ? 5 : 4;
       const total = e.maxHp * gap - (gap - pipW);
       const start = e.x - total / 2;
-      const pipY = many ? e.y - 40 : e.y - 38;
+      const pipY = e.y - 38;
       for (let i = 0; i < e.maxHp; i++) {
         ctx.fillStyle = i < e.hp ? color : '#2c2433';
         ctx.fillRect(start + i * gap, pipY, pipW, pipH);
@@ -2043,7 +2026,7 @@
     const y = e.y - 30 * (e.scale || 1) - 8;
     ctx.fillStyle = '#241821';
     ctx.fillRect(e.x - w / 2, y, w, 4);
-    ctx.fillStyle = e.kind === 'cat' ? '#f3b15a' : e.friendly ? '#7ec8ff' : e.kind === 'baozi' ? '#ffd15c' : e.kind === 'aa' ? '#ffb15a' : e.kind === 'smallBoss' ? '#ff8a4a' : '#ff4d6d';
+    ctx.fillStyle = e.friendly ? '#7ec8ff' : e.kind === 'baozi' ? '#ffd15c' : e.kind === 'aa' ? '#ffb15a' : e.kind === 'smallBoss' ? '#ff8a4a' : '#ff4d6d';
     ctx.fillRect(e.x - w / 2, y, w * Math.max(0, e.hp) / e.maxHp, 4);
   }
 
@@ -2266,13 +2249,13 @@
   }
 
   function drawTag(e) {
-    const text = { ground: '地面', aa: '防空', heli: '直升机', baozi: '极速飞机', smallBoss: '小Boss', bigBoss: '大Boss', cat: '猫' }[e.kind];
+    const text = { ground: '地面', aa: '防空', heli: '直升机', baozi: '极速飞机', smallBoss: '小Boss', bigBoss: '大Boss', bird: '玄凤鹦鹉' }[e.kind];
     if (!text) return;
     ctx.save();
     ctx.font = '12px "Noto Sans SC", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillStyle = e.kind === 'cat' ? '#ffe0b0' : e.kind === 'baozi' ? '#ffe38a' : e.kind === 'aa' ? '#ffd0a4' : e.kind === 'ground' ? '#e6d48a' : '#ffd0d6';
-    const y = e.kind === 'cat' ? e.y - 54 : e.y - (e.maxHp > 4 ? 30 * (e.scale || 1) + 18 : 48);
+    ctx.fillStyle = e.kind === 'bird' ? '#ffe7a8' : e.kind === 'baozi' ? '#ffe38a' : e.kind === 'aa' ? '#ffd0a4' : e.kind === 'ground' ? '#e6d48a' : '#ffd0d6';
+    const y = e.kind === 'bird' ? e.y - 58 : e.y - (e.maxHp > 4 ? 30 * (e.scale || 1) + 18 : 48);
     ctx.fillText(text, e.x, y);
     ctx.restore();
   }
@@ -2746,40 +2729,34 @@
     ctx.restore();
   }
 
-  const catSprite = new Image();
-  catSprite.src = 'assets/cat-real.png?v=1';
+  const birdBody = new Image();
+  birdBody.src = 'assets/cockatiel-body.png?v=1';
+  const birdWings = new Image();
+  birdWings.src = 'assets/cockatiel-wings.png?v=1';
 
   function drawCat(e) {
     ctx.save();
     ctx.translate(e.x, e.y);
     ctx.scale(e.face || 1, 1);
-    const flash = e.flash > 0;
-    const bob = e.running ? Math.abs(Math.sin((e.run || 0) * 2)) * 2.4 : 0;
-    ctx.translate(0, -bob);
-    if (catSprite.complete && catSprite.naturalWidth) {
-      const srcW = catSprite.naturalWidth;
-      const srcH = catSprite.naturalHeight;
-      const w = 96;
+    const bob = Math.sin(elapsed * 10 + (e.phase || 0)) * 2.2;
+    ctx.translate(0, bob);
+    if (birdBody.complete && birdBody.naturalWidth && birdWings.complete && birdWings.naturalWidth) {
+      const srcW = birdBody.naturalWidth;
+      const srcH = birdBody.naturalHeight;
+      const w = 118;
       const h = w * srcH / srcW;
-      const ox = -w * 0.52;
-      const oy = -h * 0.7;
       const sc = w / srcW;
-      const cut = 204;
-      if (flash) ctx.filter = 'brightness(2.6)';
-      ctx.drawImage(catSprite, 0, 0, srcW, cut, ox, oy, w, cut * sc);
-      const step = Math.sin(e.run || 0) * 0.48;
-      const drawLeg = (sx, sy, sw, sh, hipX, hipY, angle) => {
-        ctx.save();
-        ctx.translate(ox + hipX * sc, oy + hipY * sc);
-        ctx.rotate(angle);
-        ctx.drawImage(catSprite, sx, sy, sw, sh, (sx - hipX) * sc, (sy - hipY) * sc, sw * sc, sh * sc);
-        ctx.restore();
-      };
-      drawLeg(48, 196, 100, 91, 96, 206, step);
-      drawLeg(138, 196, 86, 91, 176, 206, -step);
-      drawLeg(278, 196, 62, 91, 308, 206, -step);
-      drawLeg(332, 188, 122, 99, 352, 200, step);
-      ctx.filter = 'none';
+      const ox = -w * 0.72;
+      const oy = -h * 0.58;
+      ctx.drawImage(birdBody, ox, oy, w, h);
+      const flap = Math.sin(elapsed * 11 + (e.phase || 0)) * 0.34;
+      const pivotX = 465;
+      const pivotY = 290;
+      ctx.save();
+      ctx.translate(ox + pivotX * sc, oy + pivotY * sc);
+      ctx.rotate(flap);
+      ctx.drawImage(birdWings, -pivotX * sc, -pivotY * sc, w, h);
+      ctx.restore();
     }
     ctx.restore();
   }
@@ -2788,7 +2765,7 @@
     drawBossAura(e, false);
     if (e.kind === 'ground') drawGround(e);
     else if (e.kind === 'aa') drawAa(e, false);
-    else if (e.kind === 'cat') drawCat(e);
+    else if (e.kind === 'bird') drawCat(e);
     else if (e.kind === 'heli') drawHeli(e, false);
     else if (e.kind === 'baozi') ship(e.x, e.y, PAL.baozi, e.flash, e.scale, true);
     else if (e.kind === 'smallBoss') ship(e.x, e.y, PAL.small, e.flash, e.scale, true);
@@ -3065,7 +3042,7 @@
         drawBossAura(e, false);
         if (e.kind === 'ground') drawGround(e);
         else if (e.kind === 'aa') drawAa(e, false);
-        else if (e.kind === 'cat') drawCat(e);
+        else if (e.kind === 'bird') drawCat(e);
         else if (e.kind === 'heli') drawHeli(e, false);
         else if (e.kind === 'baozi') ship(e.x, e.y, PAL.baozi, e.flash, e.scale, true);
         else if (e.kind === 'smallBoss') ship(e.x, e.y, PAL.small, e.flash, e.scale, true);
@@ -3354,7 +3331,7 @@
     else if (id === 'freeze') freezeLeft = Math.max(freezeLeft, 4);
     else if (id === 'strike') {
       for (const e of enemies.slice()) {
-        if (e.dead) continue;
+        if (e.dead || e.kind === 'bird') continue;
         e.hp -= 4;
         e.flash = 0.12;
         if (e.hp <= 0) destroyEnemy(e);
