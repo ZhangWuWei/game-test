@@ -440,6 +440,72 @@
     bannerTimer = 2.6;
   }
 
+  let eggKeys = '';
+  let titleTaps = 0;
+  let planetTaps = 0;
+  let planetGlow = 0;
+  let starTrail = 0;
+  const eggFound = { title: false, star: false, planet: false, footer: false };
+  try {
+    const savedEggs = JSON.parse(localStorage.getItem('starbound-eggs') || '{}');
+    eggFound.title = !!savedEggs.title;
+    eggFound.star = !!savedEggs.star;
+    eggFound.planet = !!savedEggs.planet;
+    eggFound.footer = !!savedEggs.footer;
+  } catch {}
+  function saveEggs() {
+    try { localStorage.setItem('starbound-eggs', JSON.stringify(eggFound)); } catch {}
+  }
+  function grantEgg(flag, coins, message) {
+    showBanner(message);
+    const line = document.querySelector('.home-copy p');
+    if (homeOpen() && line) line.textContent = message;
+    if (!eggFound[flag]) {
+      eggFound[flag] = true;
+      addCoins(coins);
+      saveEggs();
+      syncHUD();
+    }
+    tone(880, 0.08, 'triangle', 0.04);
+    tone(1180, 0.14, 'sine', 0.03);
+  }
+  function pokeTitle() {
+    titleTaps += 1;
+    const h1 = $('home-title');
+    if (h1) {
+      h1.classList.add('egg');
+      setTimeout(() => h1.classList.remove('egg'), 180);
+    }
+    if (titleTaps < 5) return;
+    titleTaps = 0;
+    grantEgg('title', 12, '飞行员，你点到了没写在任务里的那一行。');
+  }
+  function pokePlanet() {
+    planetTaps += 1;
+    planetGlow = 1;
+    burst(685, 160, '#d7ecff', 8);
+    if (planetTaps < 3) return;
+    planetTaps = 0;
+    planetGlow = 2.4;
+    burst(685, 160, '#ffe7a8', 26);
+    grantEgg('planet', 8, '这颗行星叫蓝隼');
+  }
+  function noteEggKey(e) {
+    if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || shopOpen()) return;
+    if (e.key.length !== 1) return;
+    eggKeys = (eggKeys + e.key.toLowerCase()).slice(-6);
+    if (!eggKeys.endsWith('star')) return;
+    eggKeys = '';
+    starTrail = 7;
+    const x = player ? player.x : W / 2;
+    const y = player ? player.y : H / 2;
+    burst(x, y, '#ffe7a8', 22);
+    grantEgg('star', 20, 'STAR · 星海记得你');
+  }
+  function hitPlanet(p) {
+    return Math.hypot(p.x - 685, p.y - 160) < 90;
+  }
+
   function showOverlay(tag, title, text, button, hint) {
     $('overlay-tag').textContent = tag;
     $('overlay-title').textContent = title;
@@ -1565,6 +1631,23 @@
   function update(dt) {
     elapsed += dt;
     hitFlash = Math.max(0, hitFlash - dt);
+    planetGlow = Math.max(0, planetGlow - dt);
+    if (starTrail > 0) {
+      starTrail = Math.max(0, starTrail - dt);
+      if (player && mode === 'playing') {
+        particles.push({
+          kind: 'spark',
+          x: player.x + (Math.random() - 0.5) * 10,
+          y: player.y + 18,
+          vx: (Math.random() - 0.5) * 24,
+          vy: 36,
+          life: 0.38,
+          max: 0.38,
+          color: ['#ffd56a', '#ff8ad4', '#8ef0ff', '#c6ff9a'][(Math.random() * 4) | 0],
+          w: 2.6,
+        });
+      }
+    }
     baseFlash = Math.max(0, baseFlash - dt);
     reviveGrace = Math.max(0, reviveGrace - dt);
     shake = Math.max(0, shake - dt * 36);
@@ -2986,6 +3069,15 @@
     ctx.beginPath();
     ctx.arc(752, 82, 9, 0, Math.PI * 2);
     ctx.fill();
+    if (planetGlow > 0) {
+      ctx.globalAlpha = Math.min(0.9, planetGlow);
+      ctx.strokeStyle = '#ffe7a8';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(685, 160, 90, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
 
     if (firstPerson && player && mode !== 'ready') {
       brightenFirstPerson();
@@ -3370,6 +3462,28 @@
     else beginGame();
   }
 
+  const homeTitle = $('home-title');
+  if (homeTitle) {
+    homeTitle.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    homeTitle.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      pokeTitle();
+    });
+  }
+  const secretStar = $('secret-star');
+  if (secretStar) {
+    secretStar.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      secretStar.classList.add('egg');
+      grantEgg('footer', 5, '页脚里藏着一颗星');
+    });
+  }
+
   $('play').addEventListener('click', e => {
     e.preventDefault();
     e.stopPropagation();
@@ -3378,7 +3492,7 @@
   const homeEl = $('home');
   if (homeEl) {
     homeEl.addEventListener('pointerdown', e => {
-      if (e.target.closest && e.target.closest('#sound, #pause, a, #shop-open, #shop, .home-shop, .level-jump')) return;
+      if (e.target.closest && e.target.closest('#sound, #pause, a, #shop-open, #shop, .home-shop, .level-jump, #home-title')) return;
       e.preventDefault();
       e.stopPropagation();
       beginGame();
@@ -3405,6 +3519,7 @@
   window.addEventListener('keydown', () => { if (soundOn) ensureAudio(); });
 
   window.addEventListener('keydown', e => {
+    noteEggKey(e);
     if (e.target && e.target.closest && e.target.closest('.level-jump')) {
       if (e.code === 'Escape') {
         closeLevelMenus();
@@ -3528,7 +3643,8 @@
     const dx = p.x - gesture.x;
     const dy = p.y - gesture.y;
     const tap = !gesture.moved && Math.hypot(dx, dy) < 8;
-    if (!tap) placePlayer({ x: gesture.originX + dx, y: gesture.originY + dy });
+    if (tap && mode === 'playing' && !firstPerson && hitPlanet(p)) pokePlanet();
+    else if (!tap) placePlayer({ x: gesture.originX + dx, y: gesture.originY + dy });
     else if (mode === 'playing' && gesture.inArena && e.pointerType === 'mouse') throwBomb();
     dragging = false;
     gesture = null;
