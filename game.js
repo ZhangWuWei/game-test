@@ -1018,6 +1018,7 @@
 
   function hitRadius(e) {
     if (e.kind === 'drone') return { x: 16, y: 14 };
+    if (e.kind === 'cat') return { x: 30, y: 24 };
     if (e.kind === 'ground' || e.kind === 'aa') return { x: 30, y: 24 };
     const s = e.scale || 1;
     return { x: 22 * s, y: 22 * s };
@@ -2021,7 +2022,7 @@
       const pipH = many ? 4 : e.maxHp > 3 ? 5 : 4;
       const total = e.maxHp * gap - (gap - pipW);
       const start = e.x - total / 2;
-      const pipY = many ? e.y - 30 : e.y - 38;
+      const pipY = many ? e.y - 40 : e.y - 38;
       for (let i = 0; i < e.maxHp; i++) {
         ctx.fillStyle = i < e.hp ? color : '#2c2433';
         ctx.fillRect(start + i * gap, pipY, pipW, pipH);
@@ -2261,7 +2262,7 @@
     ctx.font = '12px "Noto Sans SC", sans-serif';
     ctx.textAlign = 'center';
     ctx.fillStyle = e.kind === 'cat' ? '#ffe0b0' : e.kind === 'baozi' ? '#ffe38a' : e.kind === 'aa' ? '#ffd0a4' : e.kind === 'ground' ? '#e6d48a' : '#ffd0d6';
-    const y = e.kind === 'cat' ? e.y - 42 : e.y - (e.maxHp > 4 ? 30 * (e.scale || 1) + 18 : 48);
+    const y = e.kind === 'cat' ? e.y - 54 : e.y - (e.maxHp > 4 ? 30 * (e.scale || 1) + 18 : 48);
     ctx.fillText(text, e.x, y);
     ctx.restore();
   }
@@ -2735,69 +2736,23 @@
     ctx.restore();
   }
 
+  const catSprite = new Image();
+  catSprite.src = 'assets/cat-real.png?v=1';
+
   function drawCat(e) {
     ctx.save();
     ctx.translate(e.x, e.y);
     ctx.scale(e.face || 1, 1);
     const flash = e.flash > 0;
-    const gait = e.run || 0;
-    const bob = e.running ? Math.abs(Math.sin(gait * 2)) * 3.6 : 0;
+    const bob = e.running ? Math.abs(Math.sin((e.run || 0) * 2)) * 2.2 : 0;
     ctx.translate(0, -bob);
-    const swingA = Math.sin(gait) * 10;
-    const swingB = Math.sin(gait + Math.PI) * 10;
-    const leg = (hipX, hipY, swing) => {
-      const pawX = hipX + swing;
-      const pawY = hipY + 15;
-      ctx.beginPath();
-      ctx.moveTo(hipX, hipY);
-      ctx.quadraticCurveTo(hipX + swing * 0.45, hipY + 8, pawX, pawY);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.ellipse(pawX, pawY + 1, 3.4, 1.7, 0, 0, Math.PI * 2);
-      ctx.fill();
-    };
-    ctx.fillStyle = flash ? '#fff' : '#f3b15a';
-    ctx.strokeStyle = '#ffe7c2';
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.ellipse(0, 6, 18, 12, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.lineCap = 'round';
-    ctx.lineWidth = 3.2;
-    ctx.strokeStyle = flash ? '#fff' : '#c56a22';
-    ctx.fillStyle = flash ? '#fff' : '#f3b15a';
-    leg(12, 14, swingA);
-    leg(-14, 14, swingA);
-    leg(5, 16, swingB);
-    leg(-7, 16, swingB);
-    ctx.fillStyle = flash ? '#fff' : '#f3b15a';
-    ctx.strokeStyle = '#ffe7c2';
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.arc(14, -1, 10, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(7, -8);
-    ctx.lineTo(9, -20);
-    ctx.lineTo(15, -8);
-    ctx.moveTo(15, -9);
-    ctx.lineTo(20, -20);
-    ctx.lineTo(22, -6);
-    ctx.fill();
-    ctx.strokeStyle = flash ? '#fff' : '#e0893a';
-    ctx.lineWidth = 3;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(-16, 4);
-    ctx.quadraticCurveTo(-28, -6 + Math.sin(elapsed * 8 + e.phase) * 5, -20, -16);
-    ctx.stroke();
-    ctx.fillStyle = '#2a1a12';
-    ctx.beginPath();
-    ctx.arc(17, -2, 1.5, 0, Math.PI * 2);
-    ctx.arc(11, -1, 1.4, 0, Math.PI * 2);
-    ctx.fill();
+    if (catSprite.complete && catSprite.naturalWidth) {
+      const w = 96;
+      const h = w * catSprite.naturalHeight / catSprite.naturalWidth;
+      if (flash) ctx.filter = 'brightness(2.6)';
+      ctx.drawImage(catSprite, -w * 0.52, -h * 0.7, w, h);
+      ctx.filter = 'none';
+    }
     ctx.restore();
   }
 
