@@ -146,6 +146,7 @@
     { id: 'bombSpec', cat: 'mode', name: '炸弹专精', desc: '开局再加 20 颗炸弹，炸弹伤害 +1，主炮变慢。', price: [75], max: 1, mode: true },
     { id: 'auroraSpec', cat: 'mode', name: '极光专精', desc: '每关极光 +15，极光伤害变成 4，主炮变慢。', price: [75], max: 1, mode: true },
     { id: 'endless', cat: 'mode', name: '无尽余波', desc: '打完十关不结束，第 10 关一波接一波，越来越快。', price: [120], max: 1, mode: true },
+    { id: 'layers', cat: 'mode', name: '多层雷电', desc: '开局就带着雷电。每一发自动打出三道雷击，每道扣 3 血，整关都在。', price: [70], max: 1, mode: true },
     { id: 'repair', cat: 'item', name: '维修包', desc: '立刻回复 8 滴血，不超过上限。', price: [16], stack: 9 },
     { id: 'weld', cat: 'item', name: '基地焊枪', desc: '基地立刻 +5，不超过这一局的上限。', price: [18], stack: 9 },
     { id: 'freeze', cat: 'item', name: '冻结弹', desc: '敌方停住 4 秒，自己还能动、还能开枪。', price: [22], stack: 9 },
@@ -197,6 +198,7 @@
     if (modeId === 'bombSpec') { bombs += 20; bombDmg += 1; fireScale *= 1.25; }
     if (modeId === 'auroraSpec') { aurora += 15; auroraDmg += 1; fireScale *= 1.2; }
     if (modeId === 'endless') coin = 1.2;
+    const layers = modeId === 'layers' ? 3 : 1;
     return {
       maxHp: PLAYER_MAX + hull * 2,
       speed,
@@ -209,6 +211,7 @@
       lightning: rankOf('spark') ? 6 : 0,
       flame: rankOf('nozzle') ? 4 : 0,
       wing: rankOf('wing') > 0,
+      layers,
       enemy,
       coin,
       mode: modeId,
@@ -362,7 +365,7 @@
     $('planes').textContent = `${planeKilled()} / ${planeTarget(lv)}`;
     $('ground').textContent = `${killedGround} / ${lv.ground}`;
     $('items').textContent = `${collectedItems} / ${itemPlanNow.length}`;
-    $('lightning').textContent = lightning > 0 ? `${lightning.toFixed(1)}s` : '—';
+    $('lightning').textContent = perks().layers > 1 ? '三道' : lightning > 0 ? `${lightning.toFixed(1)}s` : '—';
     $('flame').textContent = flame > 0 ? `${flame.toFixed(1)}s` : '—';
     $('bombs').textContent = String(bombStock);
     $('aurora').textContent = String(auroraStock);
@@ -1453,10 +1456,10 @@
     player.x = Math.max(24, Math.min(W - 24, player.x));
     player.y = Math.max(40, Math.min(H - 38, player.y));
 
-    if (lightning > 0) {
-      lightning = Math.max(0, lightning - dt);
-      $('lightning').textContent = lightning > 0 ? `${lightning.toFixed(1)}s` : '—';
-    }
+    if (lightning > 0) lightning = Math.max(0, lightning - dt);
+    if (perks().layers > 1) $('lightning').textContent = '三道';
+    else if (lightning > 0) $('lightning').textContent = `${lightning.toFixed(1)}s`;
+    else $('lightning').textContent = '—';
     if (flame > 0) {
       flame = Math.max(0, flame - dt);
       $('flame').textContent = flame > 0 ? `${flame.toFixed(1)}s` : '—';
@@ -1467,7 +1470,8 @@
     const fireGap = perks().fire;
     if (fireClock >= fireGap) {
       fireClock %= fireGap;
-      const bolt = lightning > 0;
+      const layers = perks().layers || 1;
+      const bolt = lightning > 0 || layers > 1;
       const shot = (x, vx) => lasers.push({
         x,
         y: player.y - 28,
@@ -1480,7 +1484,10 @@
         dead: false,
       });
       shot(player.x, 0);
-      if (perks().wing && !bolt) {
+      if (bolt && layers > 1) {
+        shot(player.x - 22, -130);
+        shot(player.x + 22, 130);
+      } else if (perks().wing && !bolt) {
         shot(player.x - 18, -70);
         shot(player.x + 18, 70);
       }
