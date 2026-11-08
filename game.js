@@ -236,12 +236,22 @@
     return (CATALOG.find(g => g.id === id) || {}).name || '标准突击';
   }
 
-  const stars = Array.from({ length: 150 }, () => ({
+  const STAR_TINTS = ['#f7fbff', '#b9dcff', '#ffe3a6', '#d7c6ff', '#9ef0ff'];
+  const stars = Array.from({ length: 240 }, () => ({
     x: Math.random() * W,
     y: Math.random() * H,
-    r: Math.random() * 1.35 + 0.3,
-    speed: Math.random() * 24 + 7,
-    a: Math.random() * 0.6 + 0.15,
+    r: Math.random() * 1.55 + 0.25,
+    speed: Math.random() * 30 + 6,
+    a: Math.random() * 0.72 + 0.18,
+    tw: Math.random() * Math.PI * 2,
+    tint: STAR_TINTS[Math.floor(Math.random() * STAR_TINTS.length)],
+  }));
+  const meteors = Array.from({ length: 3 }, () => ({
+    x: Math.random() * W,
+    y: Math.random() * H * 0.55,
+    vx: -(160 + Math.random() * 140),
+    vy: 55 + Math.random() * 50,
+    life: Math.random() * 1.4,
   }));
 
   function resize() {
@@ -2744,13 +2754,31 @@
     ctx.translate(e.x, e.y);
     ctx.scale(e.face || 1, 1);
     const flash = e.flash > 0;
-    const bob = e.running ? Math.abs(Math.sin((e.run || 0) * 2)) * 2.2 : 0;
+    const bob = e.running ? Math.abs(Math.sin((e.run || 0) * 2)) * 2.4 : 0;
     ctx.translate(0, -bob);
     if (catSprite.complete && catSprite.naturalWidth) {
+      const srcW = catSprite.naturalWidth;
+      const srcH = catSprite.naturalHeight;
       const w = 96;
-      const h = w * catSprite.naturalHeight / catSprite.naturalWidth;
+      const h = w * srcH / srcW;
+      const ox = -w * 0.52;
+      const oy = -h * 0.7;
+      const sc = w / srcW;
+      const cut = 204;
       if (flash) ctx.filter = 'brightness(2.6)';
-      ctx.drawImage(catSprite, -w * 0.52, -h * 0.7, w, h);
+      ctx.drawImage(catSprite, 0, 0, srcW, cut, ox, oy, w, cut * sc);
+      const step = Math.sin(e.run || 0) * 0.48;
+      const drawLeg = (sx, sy, sw, sh, hipX, hipY, angle) => {
+        ctx.save();
+        ctx.translate(ox + hipX * sc, oy + hipY * sc);
+        ctx.rotate(angle);
+        ctx.drawImage(catSprite, sx, sy, sw, sh, (sx - hipX) * sc, (sy - hipY) * sc, sw * sc, sh * sc);
+        ctx.restore();
+      };
+      drawLeg(48, 196, 100, 91, 96, 206, step);
+      drawLeg(138, 196, 86, 91, 176, 206, -step);
+      drawLeg(278, 196, 62, 91, 308, 206, -step);
+      drawLeg(332, 188, 122, 99, 352, 200, step);
       ctx.filter = 'none';
     }
     ctx.restore();
@@ -2866,56 +2894,121 @@
     ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = '#050a17';
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#07061a');
+    sky.addColorStop(0.45, '#071226');
+    sky.addColorStop(1, '#040814');
+    ctx.fillStyle = sky;
     ctx.fillRect(0, 0, W, H);
-    const nebula = ctx.createRadialGradient(W * 0.7, H * 0.33, 0, W * 0.7, H * 0.33, 420);
-    nebula.addColorStop(0, '#14234b55');
-    nebula.addColorStop(0.5, '#13172e33');
-    nebula.addColorStop(1, '#050a1700');
+    ctx.save();
+    ctx.translate(W * 0.48, H * 0.4);
+    ctx.rotate(-0.5);
+    const band = ctx.createLinearGradient(0, -58, 0, 58);
+    band.addColorStop(0, 'rgba(90, 70, 180, 0)');
+    band.addColorStop(0.42, 'rgba(150, 120, 255, 0.16)');
+    band.addColorStop(0.5, 'rgba(210, 230, 255, 0.22)');
+    band.addColorStop(0.58, 'rgba(80, 180, 255, 0.14)');
+    band.addColorStop(1, 'rgba(40, 80, 180, 0)');
+    ctx.fillStyle = band;
+    ctx.fillRect(-W, -58, W * 2.2, 116);
+    ctx.restore();
+    const nebula = ctx.createRadialGradient(W * 0.72, H * 0.28, 10, W * 0.72, H * 0.28, 360);
+    nebula.addColorStop(0, 'rgba(70, 140, 255, 0.28)');
+    nebula.addColorStop(0.45, 'rgba(30, 40, 120, 0.12)');
+    nebula.addColorStop(1, 'rgba(5, 10, 23, 0)');
     ctx.fillStyle = nebula;
     ctx.fillRect(0, 0, W, H);
-    const blueCloud = ctx.createRadialGradient(100, 530, 0, 100, 530, 350);
-    blueCloud.addColorStop(0, '#0a315333');
-    blueCloud.addColorStop(1, 'transparent');
-    ctx.fillStyle = blueCloud;
+    const violet = ctx.createRadialGradient(120, 150, 0, 150, 180, 260);
+    violet.addColorStop(0, 'rgba(150, 60, 190, 0.24)');
+    violet.addColorStop(0.55, 'rgba(70, 20, 110, 0.08)');
+    violet.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = violet;
+    ctx.fillRect(0, 0, W, H);
+    const teal = ctx.createRadialGradient(80, 470, 0, 90, 480, 240);
+    teal.addColorStop(0, 'rgba(20, 90, 140, 0.2)');
+    teal.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = teal;
     ctx.fillRect(0, 0, W, H);
     for (const s of stars) {
       if (mode !== 'paused') s.y = (s.y + s.speed * dt) % H;
-      ctx.globalAlpha = s.a;
-      ctx.fillStyle = '#e7f3ff';
+      const twinkle = 0.55 + Math.sin(elapsed * (1.4 + s.r) + s.tw) * 0.45;
+      ctx.globalAlpha = s.a * twinkle;
+      ctx.fillStyle = s.tint;
       ctx.beginPath();
       ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
       ctx.fill();
-      if (s.r > 1.4) {
-        ctx.shadowColor = '#d7e8ff';
-        ctx.shadowBlur = 8;
-        ctx.fillRect(s.x - 5, s.y - 0.4, 10, 0.8);
-        ctx.fillRect(s.x - 0.4, s.y - 5, 0.8, 10);
+      if (s.r > 1.35) {
+        ctx.shadowColor = s.tint;
+        ctx.shadowBlur = 10;
+        const arm = 4 + s.r * 4;
+        ctx.fillRect(s.x - arm, s.y - 0.45, arm * 2, 0.9);
+        ctx.fillRect(s.x - 0.45, s.y - arm, 0.9, arm * 2);
         ctx.shadowBlur = 0;
       }
     }
     ctx.globalAlpha = 1;
-    ctx.strokeStyle = '#35527b20';
-    ctx.lineWidth = 1;
+    for (const m of meteors) {
+      if (mode !== 'paused') {
+        m.life -= dt;
+        m.x += m.vx * dt;
+        m.y += m.vy * dt;
+        if (m.life <= 0 || m.x < -40 || m.y > H + 20) {
+          m.x = 80 + Math.random() * (W - 40);
+          m.y = Math.random() * H * 0.35;
+          m.vx = -(160 + Math.random() * 140);
+          m.vy = 55 + Math.random() * 50;
+          m.life = 0.7 + Math.random() * 0.8;
+        }
+      }
+      ctx.strokeStyle = 'rgba(220, 240, 255, 0.85)';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(m.x, m.y);
+      ctx.lineTo(m.x - m.vx * 0.08, m.y - m.vy * 0.08);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    const glow = ctx.createRadialGradient(685, 160, 40, 685, 160, 130);
+    glow.addColorStop(0, 'rgba(120, 180, 255, 0.18)');
+    glow.addColorStop(1, 'rgba(120, 180, 255, 0)');
+    ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(685, 160, 85, 0, Math.PI * 2);
-    ctx.stroke();
-    const planet = ctx.createRadialGradient(655, 125, 0, 695, 165, 83);
-    planet.addColorStop(0, '#17243a');
-    planet.addColorStop(0.8, '#0a1223');
-    planet.addColorStop(1, '#060c19');
+    ctx.arc(685, 160, 130, 0, Math.PI * 2);
+    ctx.fill();
+    const planet = ctx.createRadialGradient(650, 128, 8, 700, 172, 86);
+    planet.addColorStop(0, '#6ea4d8');
+    planet.addColorStop(0.28, '#2b4d78');
+    planet.addColorStop(0.72, '#122033');
+    planet.addColorStop(1, '#070d18');
     ctx.fillStyle = planet;
-    ctx.shadowColor = '#7eb6ff';
-    ctx.shadowBlur = 18;
+    ctx.shadowColor = '#8ec4ff';
+    ctx.shadowBlur = 22;
     ctx.beginPath();
     ctx.arc(685, 160, 81, 0, Math.PI * 2);
     ctx.fill();
     ctx.shadowBlur = 0;
-    ctx.strokeStyle = '#9ec4ff55';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(170, 220, 255, 0.55)';
+    ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.ellipse(685, 168, 108, 22, -0.35, 0, Math.PI * 2);
+    ctx.arc(685, 160, 84, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.strokeStyle = 'rgba(190, 230, 255, 0.7)';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.ellipse(685, 168, 112, 20, -0.38, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255, 214, 140, 0.45)';
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.ellipse(685, 174, 128, 14, -0.22, 0, Math.PI * 2);
+    ctx.stroke();
+    const moon = ctx.createRadialGradient(748, 78, 1, 752, 82, 11);
+    moon.addColorStop(0, '#f4f7ff');
+    moon.addColorStop(1, '#8ea4c4');
+    ctx.fillStyle = moon;
+    ctx.beginPath();
+    ctx.arc(752, 82, 9, 0, Math.PI * 2);
+    ctx.fill();
 
     if (firstPerson && player && mode !== 'ready') {
       brightenFirstPerson();
