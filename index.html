@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#080c15" />
   <title>星际防线 · STARBOUND</title>
-  <link rel="stylesheet" href="style.css?v=shop1" />
+  <link rel="stylesheet" href="style.css?v=jump1" />
 </head>
 <body>
   <div class="home" id="home">
@@ -18,6 +18,10 @@
     <div class="home-dock">
       <div id="home-coins" class="home-coins">星币 80</div>
       <div class="home-actions">
+        <div class="level-jump">
+          <button type="button" class="home-shop jump-button" data-jump-toggle>跳关卡</button>
+          <div class="level-menu" hidden></div>
+        </div>
         <button type="button" id="play" class="home-play">开始游戏</button>
         <button type="button" id="home-shop" class="home-shop">商城</button>
       </div>
@@ -31,7 +35,7 @@
     <section class="heading"><div><div class="eyebrow">ARCADE / SPACE SURVIVAL</div><h1>宇宙很大，<span>守住你的航线。</span></h1><p>驾驶蓝色战机，逐关突破红色舰队，同时躲开地面炮台。</p></div><div class="mission-id">十关突击<span>LEVEL 01 — 10</span></div></section>
     <section class="dashboard">
       <div class="game-column">
-        <div class="game-toolbar"><span><i class="live-dot"></i> 深空战区 <b>SECTOR 07</b></span><div><span id="status">待命中</span><button id="pause" class="icon-button" aria-label="暂停游戏" disabled>Ⅱ</button></div></div>
+        <div class="game-toolbar"><div class="level-jump"><button type="button" class="jump-button" data-jump-toggle>跳关卡</button><div class="level-menu" hidden></div></div><span><i class="live-dot"></i> 深空战区 <b>SECTOR 07</b></span><div><span id="status">待命中</span><button id="pause" class="icon-button" aria-label="暂停游戏" disabled>Ⅱ</button></div></div>
         <div class="arena" id="arena">
           <canvas id="game" aria-label="星际射击游戏，使用方向键或 WASD 移动，空格暂停，自动发射激光"></canvas>
           <div class="level-banner" id="level-banner"></div>
@@ -71,6 +75,6 @@
     </div>
   </div>
   <div id="quick-tray" class="quick-tray"></div>
-  <script src="game.js?v=cat1"></script>
+  <script src="game.js?v=jump1"></script>
 </body>
 </html>

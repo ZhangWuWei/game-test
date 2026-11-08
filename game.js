@@ -156,12 +156,15 @@
     { id: 'strike', cat: 'item', name: '轨道轰炸', desc: '画面上每个敌人立刻扣 4 血。', price: [28], stack: 9 },
     { id: 'guard', cat: 'item', name: '紧急护盾', desc: '接下来 3 次受伤不扣血。', price: [24], stack: 6 },
     { id: 'kit', cat: 'item', name: '备用弹药', desc: '立刻再得到 8 颗炸弹和 6 发极光。', price: [20], stack: 9 },
+    { id: 'revive', cat: 'item', name: '复活药水', desc: '50 星币。使用后，这一局里死一次会满血复活。已经死了再喝，也会立刻复活一次。', price: [50], stack: 9 },
   ];
   let shopCat = 'ship';
   let shopHeld = false;
   let endlessRound = 0;
   let freezeLeft = 0;
   let guardHits = 0;
+  let reviveLeft = 0;
+  let reviveGrace = 0;
   let wallet = { coins: 80, ranks: { standard: 1 }, mode: 'standard', bag: {} };
   try {
     const saved = JSON.parse(localStorage.getItem('starbound-shop') || '');
@@ -639,8 +642,8 @@
     tone(550, 0.25);
   }
 
-  function start() {
-    levelIndex = 0;
+  function start(index) {
+    levelIndex = Number.isInteger(index) ? index : 0;
     score = 0;
     kills = 0;
     elapsed = 0;
@@ -649,6 +652,8 @@
     endlessRound = 0;
     freezeLeft = 0;
     guardHits = 0;
+    reviveLeft = 0;
+    reviveGrace = 0;
     const perk = perks();
     bombStock = START_BOMBS + perk.bombs;
     auroraStock = AURORA_COUNT + perk.aurora;
@@ -658,6 +663,30 @@
     firstPerson = false;
     beginWave();
     renderTray();
+  }
+
+  function closeLevelMenus() {
+    document.querySelectorAll('.level-menu').forEach(menu => { menu.hidden = true; });
+  }
+
+  function jumpToLevel(index) {
+    closeLevelMenus();
+    if (shopOpen()) closeShop();
+    index = Math.max(0, Math.min(LEVELS.length - 1, index));
+    const home = $('home');
+    const fromHome = homeOpen();
+    if (home) {
+      home.classList.add('hidden');
+      home.style.display = 'none';
+    }
+    const mid = !fromHome && player && (mode === 'playing' || mode === 'paused' || mode === 'levelclear');
+    if (mid) {
+      levelIndex = index;
+      endlessRound = 0;
+      beginWave();
+      return;
+    }
+    start(index);
   }
 
   function nextLevel() {
@@ -777,8 +806,29 @@
     }
   }
 
+  function revivePlayer() {
+    if (!player) return;
+    player.hp = perks().maxHp;
+    player.x = W / 2;
+    player.y = H - 95;
+    reviveGrace = 1.8;
+    lasers = lasers.filter(b => !b.enemy);
+    hitFlash = 0;
+    boom(player.x, player.y, '#7dffb2', 1.6);
+    tone(620, 0.18, 'square', 0.04);
+    mode = 'playing';
+    hideOverlay();
+    $('pause').disabled = false;
+    $('pause').textContent = 'Ⅱ';
+    $('pause').setAttribute('aria-label', '暂停游戏');
+    $('status').textContent = `${LEVELS[levelIndex].name} · 交战中`;
+    showBanner('复活了');
+    syncHUD();
+  }
+
   function damage(amount) {
     if (mode !== 'playing' || !player) return;
+    if (reviveGrace > 0) return;
     if (guardHits > 0) {
       guardHits--;
       hitFlash = 0.08;
@@ -792,6 +842,11 @@
     tone(180, 0.14, 'triangle', 0.05);
     syncHUD();
     if (player.hp <= 0) {
+      if (reviveLeft > 0) {
+        reviveLeft--;
+        revivePlayer();
+        return;
+      }
       boom(player.x, player.y, '#90d8ff', 2);
       sfxExplosion(true);
       end();
@@ -1517,6 +1572,7 @@
     elapsed += dt;
     hitFlash = Math.max(0, hitFlash - dt);
     baseFlash = Math.max(0, baseFlash - dt);
+    reviveGrace = Math.max(0, reviveGrace - dt);
     shake = Math.max(0, shake - dt * 36);
     if (bannerTimer > 0) {
       bannerTimer -= dt;
@@ -3195,6 +3251,16 @@
       shopSay('背包里没有这个道具。');
       return;
     }
+    if (id === 'revive' && mode === 'over' && player) {
+      wallet.bag[id] = have - 1;
+      if (wallet.bag[id] <= 0) delete wallet.bag[id];
+      saveWallet();
+      tone(540, 0.1, 'square', 0.03);
+      revivePlayer();
+      shopSay('复活了。');
+      renderShop();
+      return;
+    }
     if (mode !== 'playing' && mode !== 'paused') {
       shopSay('开战后再使用。');
       return;
@@ -3222,12 +3288,13 @@
     else if (id === 'kit') {
       bombStock += 8;
       auroraStock += 6;
-    } else return;
+    } else if (id === 'revive') reviveLeft++;
+    else return;
     wallet.bag[id] = have - 1;
     if (wallet.bag[id] <= 0) delete wallet.bag[id];
     saveWallet();
     tone(540, 0.1, 'square', 0.03);
-    shopSay(`使用了${g.name}。`);
+    shopSay(id === 'revive' ? '复活药水已备好。这一局死一次会满血复活。' : `使用了${g.name}。`);
     syncHUD();
     renderShop();
   }
@@ -3259,7 +3326,7 @@
   const homeEl = $('home');
   if (homeEl) {
     homeEl.addEventListener('pointerdown', e => {
-      if (e.target.closest && e.target.closest('#sound, #pause, a, #shop-open, #shop, .home-shop')) return;
+      if (e.target.closest && e.target.closest('#sound, #pause, a, #shop-open, #shop, .home-shop, .level-jump')) return;
       e.preventDefault();
       e.stopPropagation();
       beginGame();
@@ -3286,6 +3353,13 @@
   window.addEventListener('keydown', () => { if (soundOn) ensureAudio(); });
 
   window.addEventListener('keydown', e => {
+    if (e.target && e.target.closest && e.target.closest('.level-jump')) {
+      if (e.code === 'Escape') {
+        closeLevelMenus();
+        e.preventDefault();
+      }
+      return;
+    }
     if (shopOpen()) {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Enter', 'Escape'].includes(e.code)) e.preventDefault();
       if (e.code === 'Escape') closeShop();
@@ -3432,6 +3506,24 @@
   });
 
   document.addEventListener('click', e => {
+    const toggle = e.target.closest('[data-jump-toggle]');
+    const pick = e.target.closest('[data-jump]');
+    if (toggle) {
+      e.preventDefault();
+      e.stopPropagation();
+      const menu = toggle.parentElement.querySelector('.level-menu');
+      const open = menu.hidden;
+      closeLevelMenus();
+      menu.hidden = !open;
+      return;
+    }
+    if (pick) {
+      e.preventDefault();
+      e.stopPropagation();
+      jumpToLevel(Number(pick.dataset.jump));
+      return;
+    }
+    if (!(e.target.closest && e.target.closest('.level-jump'))) closeLevelMenus();
     const el = e.target.closest('#shop-open, #home-shop, #shop-close, [data-cat], [data-buy], [data-equip], [data-use]');
     if (!el) return;
     e.preventDefault();
@@ -3453,6 +3545,9 @@
     });
   }
 
+  document.querySelectorAll('.level-menu').forEach(menu => {
+    menu.innerHTML = LEVELS.map((lv, i) => `<button type="button" data-jump="${i}" aria-label="${lv.name}">${i + 1}</button>`).join('');
+  });
   renderIntel();
   syncHUD();
   renderTray();

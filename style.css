@@ -51,4 +51,16 @@ canvas{cursor:grab;touch-action:none}.arena{user-select:none;-webkit-user-select
 .quick-tray{position:fixed;right:18px;bottom:18px;z-index:35;display:none;flex-direction:column;gap:8px}
 .quick-tray.show{display:flex}
 .quick-tray button{border:1px solid #3d5d86;background:#101a2cf2;color:#d7ecff;border-radius:8px;padding:8px 12px}
-@media(max-width:760px){.home-copy h1{font-size:40px;letter-spacing:6px}.home-copy p{font-size:13px}.home{padding-bottom:6vh}.home-actions{flex-direction:column}.home-play,.home-shop{width:100%}.shop{padding:12px}.shop-head{align-items:flex-start;flex-direction:column}.shop-head h2{font-size:22px}}
+@media(max-width:760px){.home-copy h1{font-size:40px;letter-spacing:6px}.home-copy p{font-size:13px}.home{padding-bottom:6vh}.shop{padding:12px}.shop-head{align-items:flex-start;flex-direction:column}.shop-head h2{font-size:22px}}
+.level-jump{position:relative;flex:0 0 auto}
+.home-actions{flex-direction:row;flex-wrap:nowrap}
+.home-actions .level-jump{flex:1 1 0;min-width:0}
+.home-actions>.home-play,.home-actions>.home-shop{width:auto;flex:1 1 0;min-width:0}
+.home-actions .jump-button{width:100%}
+.game-toolbar .jump-button{padding:4px 10px;font-size:12px;font-weight:700;letter-spacing:1px;border:1px solid #7eb6ef;background:#102033;color:#d7ecff;border-radius:6px}
+.level-menu{position:absolute;left:0;z-index:70;display:grid;grid-template-columns:repeat(5,minmax(36px,1fr));gap:6px;width:max(220px,100%);padding:8px;background:#0e1828f5;border:1px solid #6ea8e4;border-radius:8px;box-shadow:0 12px 32px #000a}
+.level-menu[hidden]{display:none}
+.level-menu button{border:1px solid #7eb6ef;background:#16304e;color:#e7f3ff;border-radius:6px;padding:8px 0;font-weight:700}
+.level-menu button:hover{background:#1e4c78}
+.home-dock .level-menu{bottom:calc(100% + 8px)}
+.game-toolbar .level-menu{top:calc(100% + 6px)}
