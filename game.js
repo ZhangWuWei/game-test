@@ -57,6 +57,8 @@
   const HELI_INTERVAL = 2;
   const HELI_ENEMY_COUNT = 2;
   const HELI_ALLY_COUNT = 1;
+  const CAT_HP = 11;
+  const CAT_BITE = 5;
   const PLAYER_MAX = 26;
   const BASE_MAX = 19;
   const BASE_LINE = H - 100;
@@ -407,7 +409,8 @@
   }
 
   function describeLevel(lv) {
-    return `<b>${lv.name}</b>：${roster(lv)}，同时有地面炮台 ${lv.ground}，敌方防空炮台 ${ENEMY_AA_COUNT}，敌方直升机 ${HELI_ENEMY_COUNT}，我方直升机 ${HELI_ALLY_COUNT}。`;
+    const cat = lv === LEVELS[LEVELS.length - 1] ? ` 另有一只猫，${CAT_HP} 滴血，出现后随机咬一艘敌方或我方战舰，更常咬敌方，咬中扣 ${CAT_BITE} 血，不计入过关。` : '';
+    return `<b>${lv.name}</b>：${roster(lv)}，同时有地面炮台 ${lv.ground}，敌方防空炮台 ${ENEMY_AA_COUNT}，敌方直升机 ${HELI_ENEMY_COUNT}，我方直升机 ${HELI_ALLY_COUNT}。${cat}`;
   }
 
   function nextBlurb(lv) {
@@ -510,6 +513,16 @@
     enemies.push(makeCraft('ground', homeX, 90, { homeX, homeY, phase: index * 1.3 }));
   }
 
+  function spawnCat() {
+    enemies.push(makeCraft('cat', 140 + Math.random() * (W - 280), 120, {
+      hp: CAT_HP,
+      maxHp: CAT_HP,
+      scale: 1.05,
+      biteTimer: 0,
+      phase: Math.random() * Math.PI * 2,
+    }));
+  }
+
   function spawnHelicopters() {
     const enemyHomes = [
       { x: 180, y: 128 },
@@ -608,6 +621,7 @@
     if (lv.baozi) spawnNamed(lv.baozi, 'baozi', -70, 132, W / 2);
     if (lv.small) spawnNamed(lv.small, 'smallBoss', -90, 168, lv.big ? 230 : W / 2);
     if (lv.big) spawnNamed(lv.big, 'bigBoss', -120, 118, lv.small ? 560 : W / 2);
+    if (levelIndex === LEVELS.length - 1) spawnCat();
     mode = 'playing';
     hideOverlay();
     $('status').textContent = `${lv.name} · 交战中`;
@@ -758,7 +772,7 @@
   function watchBase() {
     if (mode !== 'playing') return;
     for (const e of enemies) {
-      if (e.dead || e.friendly || e.breached) continue;
+      if (e.dead || e.friendly || e.breached || e.kind === 'cat') continue;
       if (e.y >= BASE_LINE) hurtBase(e);
     }
   }
@@ -958,8 +972,83 @@
     return enemies.filter(e => e.kind === kind && !e.dead).length;
   }
 
+  function catShips() {
+    const foes = enemies.filter(e => !e.dead && e.hp > 0 && e.kind !== 'cat' && ['plane', 'heli', 'baozi', 'smallBoss', 'bigBoss'].includes(e.kind));
+    const friends = allies.filter(a => !a.dead && a.hp > 0 && ['wing', 'heli', 'drone', 'smallBoss', 'bigBoss'].includes(a.kind));
+    if (player && player.hp > 0) friends.push(player);
+    return { foes, friends };
+  }
+
+  function pickCatPrey() {
+    const { foes, friends } = catShips();
+    const side = foes.length && (!friends.length || Math.random() < 0.75) ? foes : friends.length ? friends : foes;
+    if (!side.length) return null;
+    return side[Math.floor(Math.random() * side.length)];
+  }
+
+  function catBite(prey) {
+    burst(prey.x, prey.y, '#ffd7b0', 12);
+    sfxImpact();
+    showBanner('猫咬了一口');
+    if (prey === player) {
+      damage(CAT_BITE);
+      return;
+    }
+    if (prey.friendly) {
+      hurtAlly(prey, CAT_BITE);
+      return;
+    }
+    prey.hp -= CAT_BITE;
+    prey.flash = 0.14;
+    if (prey.hp <= 0) destroyEnemy(prey);
+  }
+
   function moveCraft(e, dt) {
     e.flash = Math.max(0, e.flash - dt);
+    if (e.kind === 'cat') {
+      e.biteWait = Math.max(0, (e.biteWait || 0) - dt);
+      if (!e.wander || Math.hypot((e.wander.x || 0) - e.x, (e.wander.y || 0) - e.y) < 28) {
+        e.wander = { x: 60 + Math.random() * (W - 120), y: 80 + Math.random() * 220 };
+      }
+      if (e.biteWait > 0) {
+        const dx = e.wander.x - e.x;
+        const dy = e.wander.y - e.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const step = Math.min(dist, 180 * dt);
+        e.x += dx / dist * step;
+        e.y += dy / dist * step;
+        e.face = dx >= 0 ? 1 : -1;
+        e.x = Math.max(36, Math.min(W - 36, e.x));
+        e.y = Math.max(52, Math.min(BASE_LINE - 36, e.y));
+        return;
+      }
+      e.biteTimer = (e.biteTimer || 0) + dt;
+      const preyGone = !e.prey || (e.prey === player ? !player || player.hp <= 0 : e.prey.dead || e.prey.hp <= 0);
+      if (preyGone || e.biteTimer > 3.2) {
+        e.prey = pickCatPrey();
+        e.biteTimer = 0;
+      }
+      const prey = e.prey;
+      const tx = prey ? prey.x : e.wander.x;
+      const ty = prey ? prey.y : e.wander.y;
+      const dx = tx - e.x;
+      const dy = ty - e.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const step = Math.min(dist, 250 * dt);
+      e.x += dx / dist * step;
+      e.y += dy / dist * step;
+      e.face = dx >= 0 ? 1 : -1;
+      e.x = Math.max(36, Math.min(W - 36, e.x));
+      const low = prey === player ? H - 64 : BASE_LINE - 36;
+      e.y = Math.max(52, Math.min(low, e.y));
+      if (prey && dist < 40) {
+        catBite(prey);
+        e.prey = null;
+        e.biteWait = 0.9;
+        e.biteTimer = 0;
+      }
+      return;
+    }
     if (e.kind === 'plane') {
       e.y += (e.speed + Math.min(elapsed * 0.25, 26)) * dt * perks().enemy;
       e.x += Math.sin(elapsed * 1.3 + e.phase) * 23 * dt;
@@ -1868,16 +1957,18 @@
   }
 
   function drawHp(e) {
-    if (e.maxHp <= 5) {
-      const color = e.friendly ? '#8ecbff' : e.kind === 'aa' ? '#ffb15a' : e.kind === 'ground' ? '#e2c86a' : '#f27088';
-      const gap = e.maxHp > 4 ? 12 : e.maxHp > 3 ? 14 : 12;
-      const pipW = e.maxHp > 4 ? 9 : e.maxHp > 3 ? 11 : 8;
-      const pipH = e.maxHp > 3 ? 5 : 4;
+    if (e.maxHp <= 5 || e.kind === 'cat') {
+      const color = e.kind === 'cat' ? '#f3b15a' : e.friendly ? '#8ecbff' : e.kind === 'aa' ? '#ffb15a' : e.kind === 'ground' ? '#e2c86a' : '#f27088';
+      const many = e.kind === 'cat';
+      const gap = many ? 7 : e.maxHp > 4 ? 12 : e.maxHp > 3 ? 14 : 12;
+      const pipW = many ? 5 : e.maxHp > 4 ? 9 : e.maxHp > 3 ? 11 : 8;
+      const pipH = many ? 4 : e.maxHp > 3 ? 5 : 4;
       const total = e.maxHp * gap - (gap - pipW);
       const start = e.x - total / 2;
+      const pipY = many ? e.y - 30 : e.y - 38;
       for (let i = 0; i < e.maxHp; i++) {
         ctx.fillStyle = i < e.hp ? color : '#2c2433';
-        ctx.fillRect(start + i * gap, e.y - 38, pipW, pipH);
+        ctx.fillRect(start + i * gap, pipY, pipW, pipH);
       }
       return;
     }
@@ -1885,7 +1976,7 @@
     const y = e.y - 30 * (e.scale || 1) - 8;
     ctx.fillStyle = '#241821';
     ctx.fillRect(e.x - w / 2, y, w, 4);
-    ctx.fillStyle = e.friendly ? '#7ec8ff' : e.kind === 'baozi' ? '#ffd15c' : e.kind === 'aa' ? '#ffb15a' : e.kind === 'smallBoss' ? '#ff8a4a' : '#ff4d6d';
+    ctx.fillStyle = e.kind === 'cat' ? '#f3b15a' : e.friendly ? '#7ec8ff' : e.kind === 'baozi' ? '#ffd15c' : e.kind === 'aa' ? '#ffb15a' : e.kind === 'smallBoss' ? '#ff8a4a' : '#ff4d6d';
     ctx.fillRect(e.x - w / 2, y, w * Math.max(0, e.hp) / e.maxHp, 4);
   }
 
@@ -2108,13 +2199,13 @@
   }
 
   function drawTag(e) {
-    const text = { ground: '地面', aa: '防空', heli: '直升机', baozi: '极速飞机', smallBoss: '小Boss', bigBoss: '大Boss' }[e.kind];
+    const text = { ground: '地面', aa: '防空', heli: '直升机', baozi: '极速飞机', smallBoss: '小Boss', bigBoss: '大Boss', cat: '猫' }[e.kind];
     if (!text) return;
     ctx.save();
     ctx.font = '12px "Noto Sans SC", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillStyle = e.kind === 'baozi' ? '#ffe38a' : e.kind === 'aa' ? '#ffd0a4' : e.kind === 'ground' ? '#e6d48a' : '#ffd0d6';
-    const y = e.y - (e.maxHp > 4 ? 30 * (e.scale || 1) + 18 : 48);
+    ctx.fillStyle = e.kind === 'cat' ? '#ffe0b0' : e.kind === 'baozi' ? '#ffe38a' : e.kind === 'aa' ? '#ffd0a4' : e.kind === 'ground' ? '#e6d48a' : '#ffd0d6';
+    const y = e.kind === 'cat' ? e.y - 42 : e.y - (e.maxHp > 4 ? 30 * (e.scale || 1) + 18 : 48);
     ctx.fillText(text, e.x, y);
     ctx.restore();
   }
@@ -2588,10 +2679,50 @@
     ctx.restore();
   }
 
+  function drawCat(e) {
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    ctx.scale(e.face || 1, 1);
+    const flash = e.flash > 0;
+    ctx.fillStyle = flash ? '#fff' : '#f3b15a';
+    ctx.strokeStyle = '#ffe7c2';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.ellipse(0, 6, 18, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(14, -1, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(7, -8);
+    ctx.lineTo(9, -20);
+    ctx.lineTo(15, -8);
+    ctx.moveTo(15, -9);
+    ctx.lineTo(20, -20);
+    ctx.lineTo(22, -6);
+    ctx.fill();
+    ctx.strokeStyle = flash ? '#fff' : '#e0893a';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-16, 4);
+    ctx.quadraticCurveTo(-28, -6 + Math.sin(elapsed * 8 + e.phase) * 5, -20, -16);
+    ctx.stroke();
+    ctx.fillStyle = '#2a1a12';
+    ctx.beginPath();
+    ctx.arc(17, -2, 1.5, 0, Math.PI * 2);
+    ctx.arc(11, -1, 1.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
   function paintEnemyWorld(e) {
     drawBossAura(e, false);
     if (e.kind === 'ground') drawGround(e);
     else if (e.kind === 'aa') drawAa(e, false);
+    else if (e.kind === 'cat') drawCat(e);
     else if (e.kind === 'heli') drawHeli(e, false);
     else if (e.kind === 'baozi') ship(e.x, e.y, PAL.baozi, e.flash, e.scale, true);
     else if (e.kind === 'smallBoss') ship(e.x, e.y, PAL.small, e.flash, e.scale, true);
@@ -2803,6 +2934,7 @@
         drawBossAura(e, false);
         if (e.kind === 'ground') drawGround(e);
         else if (e.kind === 'aa') drawAa(e, false);
+        else if (e.kind === 'cat') drawCat(e);
         else if (e.kind === 'heli') drawHeli(e, false);
         else if (e.kind === 'baozi') ship(e.x, e.y, PAL.baozi, e.flash, e.scale, true);
         else if (e.kind === 'smallBoss') ship(e.x, e.y, PAL.small, e.flash, e.scale, true);
