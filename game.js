@@ -1061,45 +1061,45 @@
   function moveCraft(e, dt) {
     e.flash = Math.max(0, e.flash - dt);
     if (e.kind === 'cat') {
-      e.biteWait = Math.max(0, (e.biteWait || 0) - dt);
-      if (!e.wander || Math.hypot((e.wander.x || 0) - e.x, (e.wander.y || 0) - e.y) < 28) {
-        e.wander = { x: 60 + Math.random() * (W - 120), y: 80 + Math.random() * 220 };
-      }
-      if (e.biteWait > 0) {
-        const dx = e.wander.x - e.x;
-        const dy = e.wander.y - e.y;
+      const catDash = (tx, ty, speed) => {
+        const dx = tx - e.x;
+        const dy = ty - e.y;
         const dist = Math.hypot(dx, dy) || 1;
-        const step = Math.min(dist, 180 * dt);
+        const step = Math.min(dist, speed * dt);
         e.x += dx / dist * step;
         e.y += dy / dist * step;
-        e.face = dx >= 0 ? 1 : -1;
+        if (Math.abs(dx) > 4) e.face = dx > 0 ? 1 : -1;
+        e.run = (e.run || 0) + step * 0.55;
+        e.running = step > 0.35;
+        return dist;
+      };
+      e.biteWait = Math.max(0, (e.biteWait || 0) - dt);
+      if (!e.wander || Math.hypot((e.wander.x || 0) - e.x, (e.wander.y || 0) - e.y) < 36) {
+        e.wander = { x: 50 + Math.random() * (W - 100), y: 70 + Math.random() * 250 };
+      }
+      if (e.biteWait > 0) {
+        catDash(e.wander.x, e.wander.y, 320);
         e.x = Math.max(36, Math.min(W - 36, e.x));
-        e.y = Math.max(52, Math.min(BASE_LINE - 36, e.y));
+        e.y = Math.max(52, Math.min(BASE_LINE - 46, e.y));
         return;
       }
       e.biteTimer = (e.biteTimer || 0) + dt;
       const preyGone = !e.prey || (e.prey === player ? !player || player.hp <= 0 : e.prey.dead || e.prey.hp <= 0);
-      if (preyGone || e.biteTimer > 3.2) {
+      if (preyGone || e.biteTimer > 2.4) {
         e.prey = pickCatPrey();
         e.biteTimer = 0;
       }
       const prey = e.prey;
       const tx = prey ? prey.x : e.wander.x;
       const ty = prey ? prey.y : e.wander.y;
-      const dx = tx - e.x;
-      const dy = ty - e.y;
-      const dist = Math.hypot(dx, dy) || 1;
-      const step = Math.min(dist, 250 * dt);
-      e.x += dx / dist * step;
-      e.y += dy / dist * step;
-      e.face = dx >= 0 ? 1 : -1;
+      const dist = catDash(tx, ty, 340);
       e.x = Math.max(36, Math.min(W - 36, e.x));
-      const low = prey === player ? H - 64 : BASE_LINE - 36;
+      const low = prey === player ? H - 64 : BASE_LINE - 46;
       e.y = Math.max(52, Math.min(low, e.y));
       if (prey && dist < 40) {
         catBite(prey);
         e.prey = null;
-        e.biteWait = 0.9;
+        e.biteWait = 0.7;
         e.biteTimer = 0;
       }
       return;
@@ -2740,6 +2740,22 @@
     ctx.translate(e.x, e.y);
     ctx.scale(e.face || 1, 1);
     const flash = e.flash > 0;
+    const gait = e.run || 0;
+    const bob = e.running ? Math.abs(Math.sin(gait * 2)) * 3.6 : 0;
+    ctx.translate(0, -bob);
+    const swingA = Math.sin(gait) * 10;
+    const swingB = Math.sin(gait + Math.PI) * 10;
+    const leg = (hipX, hipY, swing) => {
+      const pawX = hipX + swing;
+      const pawY = hipY + 15;
+      ctx.beginPath();
+      ctx.moveTo(hipX, hipY);
+      ctx.quadraticCurveTo(hipX + swing * 0.45, hipY + 8, pawX, pawY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(pawX, pawY + 1, 3.4, 1.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+    };
     ctx.fillStyle = flash ? '#fff' : '#f3b15a';
     ctx.strokeStyle = '#ffe7c2';
     ctx.lineWidth = 1.6;
@@ -2747,6 +2763,17 @@
     ctx.ellipse(0, 6, 18, 12, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 3.2;
+    ctx.strokeStyle = flash ? '#fff' : '#c56a22';
+    ctx.fillStyle = flash ? '#fff' : '#f3b15a';
+    leg(12, 14, swingA);
+    leg(-14, 14, swingA);
+    leg(5, 16, swingB);
+    leg(-7, 16, swingB);
+    ctx.fillStyle = flash ? '#fff' : '#f3b15a';
+    ctx.strokeStyle = '#ffe7c2';
+    ctx.lineWidth = 1.6;
     ctx.beginPath();
     ctx.arc(14, -1, 10, 0, Math.PI * 2);
     ctx.fill();
