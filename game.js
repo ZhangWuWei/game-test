@@ -136,6 +136,7 @@
     { id: 'engine', cat: 'ship', name: '推进引擎', desc: '移动快 12%。可以买 3 次。', price: [35, 60, 100], max: 3 },
     { id: 'cooler', cat: 'ship', name: '冷却核心', desc: '自动射击更快一点。可以买 3 次。', price: [45, 80, 130], max: 3 },
     { id: 'wing', cat: 'ship', name: '翼刀', desc: '主炮两侧各多打出一发激光。', price: [90], max: 1 },
+    { id: 'scythe', cat: 'ship', name: '机身镰刀', desc: '80 星币升到满级。机身上面长出一道镰刀，刺中敌人扣 4 血。', price: [80], max: 1 },
     { id: 'bombBay', cat: 'ammo', name: '炸弹弹舱', desc: '开局炸弹 +10。可以买 3 次。没买的时候仍是 50。', price: [30, 55, 90], max: 3 },
     { id: 'auroraCell', cat: 'ammo', name: '极光电池', desc: '每关极光 +8。可以买 3 次。没买的时候仍是 30。', price: [30, 55, 90], max: 3 },
     { id: 'spark', cat: 'ammo', name: '开局雷电', desc: '第 1 关一开始就带着 6 秒雷电。', price: [70], max: 1 },
@@ -211,6 +212,7 @@
       lightning: rankOf('spark') ? 6 : 0,
       flame: rankOf('nozzle') ? 4 : 0,
       wing: rankOf('wing') > 0,
+      scythe: rankOf('scythe') > 0,
       layers,
       enemy,
       coin,
@@ -1455,6 +1457,7 @@
     }
     player.x = Math.max(24, Math.min(W - 24, player.x));
     player.y = Math.max(40, Math.min(H - 38, player.y));
+    sweepScythe(dt);
 
     if (lightning > 0) lightning = Math.max(0, lightning - dt);
     if (perks().layers > 1) $('lightning').textContent = '三道';
@@ -1771,7 +1774,61 @@
       ctx.fill();
       ctx.globalAlpha = 1;
     }
+    if (hero && perks().scythe) drawScythe();
     ctx.restore();
+  }
+
+  function scytheOffsets() {
+    const pts = [];
+    for (let i = 0; i <= 5; i++) pts.push({ x: 0, y: -10 - i * 7 });
+    for (let i = 0; i <= 8; i++) {
+      const a = Math.PI * (1.02 + i * 0.09);
+      pts.push({ x: 14 + Math.cos(a) * 20, y: -48 + Math.sin(a) * 20 });
+    }
+    return pts;
+  }
+
+  function drawScythe() {
+    ctx.save();
+    ctx.shadowColor = '#e7f7ff';
+    ctx.shadowBlur = 14;
+    ctx.strokeStyle = '#8ecfff';
+    ctx.lineWidth = 3.4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, -6);
+    ctx.lineTo(0, -46);
+    ctx.stroke();
+    ctx.strokeStyle = '#f7fbff';
+    ctx.lineWidth = 3.6;
+    ctx.beginPath();
+    ctx.arc(14, -48, 20, Math.PI * 1.02, Math.PI * 1.74);
+    ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(14 + Math.cos(Math.PI * 1.74) * 20, -48 + Math.sin(Math.PI * 1.74) * 20, 2.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function sweepScythe(dt) {
+    if (!player || !perks().scythe) return;
+    const pts = scytheOffsets().map(p => ({ x: player.x + p.x, y: player.y + p.y }));
+    for (const e of enemies) {
+      if (e.dead || e.hp <= 0) continue;
+      e.scytheCd = Math.max(0, (e.scytheCd || 0) - dt);
+      if (e.scytheCd > 0) continue;
+      const r = hitRadius(e);
+      const reach = Math.max(r.x, r.y) + 10;
+      const hit = pts.some(p => Math.hypot(e.x - p.x, e.y - p.y) < reach);
+      if (!hit) continue;
+      e.scytheCd = 0.55;
+      e.hp -= 4;
+      e.flash = 0.12;
+      burst(e.x, e.y, '#e7f7ff', 8);
+      sfxImpact();
+      if (e.hp <= 0) destroyEnemy(e);
+    }
   }
 
   function drawGround(e, friendly = false) {
