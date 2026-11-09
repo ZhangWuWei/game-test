@@ -717,7 +717,7 @@
     tone(550, 0.25);
   }
 
-  function start(index) {
+  function start(index, opening) {
     levelIndex = Number.isInteger(index) ? index : 0;
     score = 0;
     kills = 0;
@@ -736,6 +736,18 @@
     baseFlash = 0;
     player = { x: W / 2, y: H - 95, hp: perk.maxHp };
     firstPerson = false;
+    if (opening) {
+      resetWaveFlags();
+      introT = 0;
+      mode = 'intro';
+      hideOverlay();
+      $('level-banner').classList.remove('show');
+      $('status').textContent = '开场';
+      $('pause').disabled = true;
+      syncHUD();
+      renderTray();
+      return;
+    }
     beginWave();
     renderTray();
   }
@@ -2947,6 +2959,188 @@
     ctx.restore();
   }
 
+  let introT = 0;
+
+  function finishIntro() {
+    if (mode !== 'intro') return;
+    introT = 0;
+    elapsed = 0;
+    beginWave();
+  }
+
+  function tickIntro(dt) {
+    introT += dt;
+    elapsed = introT;
+    if (introT >= 8.8) finishIntro();
+  }
+
+  function introEase(v) {
+    const t = Math.max(0, Math.min(1, v));
+    return t * t * (3 - 2 * t);
+  }
+
+  function introLine(t) {
+    if (t >= 5.7) return '直升机、我方小队和主角出动';
+    if (t >= 4.7) return '大飞船开了两条缝';
+    if (t >= 3.2) return '前面停着一艘大飞船';
+    if (t >= 2.15) return '门开了';
+    return '前面有一道门';
+  }
+
+  function introCaption(text) {
+    ctx.save();
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '20px "Noto Sans SC", sans-serif';
+    const width = Math.min(W - 48, ctx.measureText(text).width + 36);
+    ctx.fillStyle = 'rgba(6, 12, 24, 0.72)';
+    ctx.fillRect(W / 2 - width / 2, 78, width, 36);
+    ctx.strokeStyle = '#8ec4ff';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(W / 2 - width / 2, 78, width, 36);
+    ctx.fillStyle = '#f4fbff';
+    ctx.fillText(text, W / 2, 96);
+    ctx.font = '13px "Noto Sans SC", sans-serif';
+    ctx.fillStyle = '#b7d4ee';
+    ctx.fillText('点击画面或按空格跳过', W / 2, 124);
+    ctx.restore();
+  }
+
+  function drawHangarDoor(open) {
+    const gap = open * (W * 0.72);
+    const leftW = Math.max(0, W / 2 - gap / 2);
+    const panel = ctx.createLinearGradient(0, 0, 0, H);
+    panel.addColorStop(0, '#243044');
+    panel.addColorStop(0.5, '#121924');
+    panel.addColorStop(1, '#0c121c');
+    ctx.fillStyle = panel;
+    ctx.fillRect(0, 0, leftW, H);
+    ctx.fillRect(W - leftW, 0, leftW, H);
+    ctx.strokeStyle = '#6f8eae';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 7; i++) {
+      const y = 36 + i * 78;
+      ctx.beginPath();
+      ctx.moveTo(8, y);
+      ctx.lineTo(leftW - 6, y);
+      ctx.moveTo(W - leftW + 6, y);
+      ctx.lineTo(W - 8, y);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = '#d7ecff';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(10, 16, W - 20, H - 32);
+    if (open < 0.35) {
+      ctx.shadowColor = '#9ad7ff';
+      ctx.shadowBlur = 18;
+      ctx.strokeStyle = '#f4fbff';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(W / 2, 24);
+      ctx.lineTo(W / 2, H - 24);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  function drawCarrier(slit) {
+    ctx.save();
+    ctx.translate(W / 2, 248);
+    ctx.fillStyle = 'rgba(0,0,0,.35)';
+    ctx.beginPath();
+    ctx.ellipse(0, 150, 180, 18, 0, 0, Math.PI * 2);
+    ctx.fill();
+    const hull = ctx.createLinearGradient(-230, -160, 230, 140);
+    hull.addColorStop(0, '#152033');
+    hull.addColorStop(0.45, '#314864');
+    hull.addColorStop(1, '#101826');
+    ctx.fillStyle = hull;
+    ctx.strokeStyle = '#b7dcff';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#7eb6ff';
+    ctx.shadowBlur = 16;
+    ctx.beginPath();
+    ctx.moveTo(0, -168);
+    ctx.lineTo(188, -48);
+    ctx.lineTo(214, 78);
+    ctx.lineTo(120, 128);
+    ctx.lineTo(0, 146);
+    ctx.lineTo(-120, 128);
+    ctx.lineTo(-214, 78);
+    ctx.lineTo(-188, -48);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#d7f4ff';
+    ctx.beginPath();
+    ctx.ellipse(0, -108, 26, 14, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#7ec8ff';
+    ctx.fillRect(-70, -78, 140, 8);
+    const bays = [
+      { y: -18, w: 250 },
+      { y: 58, w: 210 },
+    ];
+    bays.forEach(bay => {
+      const h = 5 + slit * 34;
+      ctx.fillStyle = '#05070e';
+      ctx.fillRect(-bay.w / 2, bay.y - h / 2, bay.w, h);
+      ctx.strokeStyle = slit > 0.15 ? '#ffd27a' : '#8fb4d8';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-bay.w / 2, bay.y - h / 2, bay.w, h);
+      if (slit > 0.05) {
+        ctx.fillStyle = `rgba(150, 220, 255, ${0.15 + slit * 0.35})`;
+        ctx.fillRect(-bay.w / 2 + 10, bay.y - h / 2 + 3, bay.w - 20, Math.max(2, h - 6));
+      }
+    });
+    ctx.restore();
+  }
+
+  function drawIntro() {
+    const t = introT;
+    const doorOpen = introEase((t - 2.15) / 1.15);
+    const shipIn = introEase((t - 2.35) / 1.2);
+    const slit = introEase((t - 4.7) / 0.95);
+    const launch = Math.max(0, t - 5.7);
+    ctx.save();
+    if (shipIn > 0) {
+      ctx.save();
+      ctx.translate(W / 2, 248);
+      ctx.scale(0.72 + shipIn * 0.28, 0.72 + shipIn * 0.28);
+      ctx.translate(-W / 2, -248);
+      drawCarrier(slit);
+      ctx.restore();
+    }
+    if (doorOpen < 0.98) drawHangarDoor(doorOpen);
+    if (launch > 0 && slit > 0.4) {
+      const craft = [
+        { kind: 'heli', friendly: false, from: [400, 230], to: [180, 150], delay: 0, scale: 1 },
+        { kind: 'heli', friendly: false, from: [400, 230], to: [620, 176], delay: 0.16, scale: 1 },
+        { kind: 'heli', friendly: true, from: [400, 306], to: [156, 410], delay: 0.08, scale: 1 },
+        { kind: 'wing', from: [352, 306], to: [230, 500], delay: 0.22, scale: 0.72 },
+        { kind: 'hero', from: [400, 306], to: [W / 2, H - 108], delay: 0.05, scale: 1 },
+        { kind: 'wing', from: [448, 306], to: [570, 500], delay: 0.28, scale: 0.72 },
+      ];
+      craft.forEach(c => {
+        const u = introEase((launch - c.delay) / 1.55);
+        if (u <= 0) return;
+        const x = c.from[0] + (c.to[0] - c.from[0]) * u;
+        const y = c.from[1] + (c.to[1] - c.from[1]) * u;
+        const s = c.scale * (0.28 + u * 0.72);
+        ctx.save();
+        ctx.globalAlpha = c.kind === 'wing' ? 0.55 + (1 - u) * 0.45 : 1;
+        if (c.kind === 'heli') drawHeli({ x, y, flash: 0 }, c.friendly);
+        else ship(x, y, PAL.player, 0, s, false, c.kind === 'hero');
+        ctx.restore();
+      });
+    }
+    introCaption(introLine(t));
+    ctx.restore();
+  }
+
   function draw(dt) {
     const jx = shake > 0.2 ? (Math.random() - 0.5) * shake : 0;
     const jy = shake > 0.2 ? (Math.random() - 0.5) * shake : 0;
@@ -3079,6 +3273,11 @@
       ctx.globalAlpha = 1;
     }
 
+    if (mode === 'intro') {
+      drawIntro();
+      return;
+    }
+
     if (firstPerson && player && mode !== 'ready') {
       brightenFirstPerson();
       drawFirstPerson();
@@ -3207,6 +3406,7 @@
     const dt = Math.min((now - previous) / 1000 || 0, 0.04);
     previous = now;
     if (mode === 'playing') update(dt);
+    else if (mode === 'intro') tickIntro(dt);
     if (mode !== 'paused') {
       for (const p of particles) {
         p.x += p.vx * dt;
@@ -3451,8 +3651,8 @@
       home.classList.add('hidden');
       home.style.display = 'none';
     }
-    if (!fromHome && (mode === 'playing' || mode === 'paused' || mode === 'levelclear')) return;
-    start();
+    if (!fromHome && (mode === 'playing' || mode === 'paused' || mode === 'levelclear' || mode === 'intro')) return;
+    start(0, fromHome);
   }
 
   function beginFromOverlay() {
@@ -3532,6 +3732,13 @@
       if (e.code === 'Escape') closeShop();
       return;
     }
+    if (mode === 'intro') {
+      if (['Space', 'Enter', 'Escape'].includes(e.code)) {
+        e.preventDefault();
+        finishIntro();
+      }
+      return;
+    }
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Enter'].includes(e.code)) e.preventDefault();
     if (e.repeat) return;
     if (e.code === 'Enter' || ((homeOpen() || mode === 'ready') && e.code === 'Space')) {
@@ -3572,6 +3779,13 @@
     return !!(e.target && e.target.closest && e.target.closest('button, a, input, textarea, select'));
   }
   function beginPush(e) {
+    if (mode === 'intro') {
+      if (overArena(e) && !onUiControl(e)) {
+        finishIntro();
+        e.preventDefault();
+      }
+      return;
+    }
     if (shopOpen()) return;
     if ((e.pointerType === 'mouse' && e.button !== 0) || onUiControl(e)) return;
     if ((homeOpen() || mode === 'ready') && overArena(e)) beginGame();
