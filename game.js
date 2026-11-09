@@ -2971,7 +2971,7 @@
   function tickIntro(dt) {
     introT += dt;
     elapsed = introT;
-    if (introT >= 8.8) finishIntro();
+    if (introT >= 10.6) finishIntro();
   }
 
   function introEase(v) {
@@ -2980,11 +2980,12 @@
   }
 
   function introLine(t) {
-    if (t >= 5.7) return '直升机、我方小队和主角出动';
-    if (t >= 4.7) return '大飞船开了两条缝';
-    if (t >= 3.2) return '前面停着一艘大飞船';
-    if (t >= 2.15) return '门开了';
-    return '前面有一道门';
+    if (t >= 7.55) return '主角和无人机一起出击';
+    if (t >= 6.55) return '开了两条缝';
+    if (t >= 5.35) return '门开了';
+    if (t >= 4.4) return '前面有一扇门';
+    if (t >= 2.05) return '敌方小队打了过来';
+    return '大飞船正在行驶';
   }
 
   function introCaption(text) {
@@ -3008,40 +3009,58 @@
     ctx.restore();
   }
 
-  function drawHangarDoor(open) {
+  function drawHangarDoor(open, cover) {
+    const shown = cover == null ? 1 : Math.max(0, Math.min(1, cover));
     const gap = open * (W * 0.72);
     const leftW = Math.max(0, W / 2 - gap / 2);
+    const slide = (1 - shown) * (W / 2 + 30);
     const panel = ctx.createLinearGradient(0, 0, 0, H);
     panel.addColorStop(0, '#243044');
     panel.addColorStop(0.5, '#121924');
     panel.addColorStop(1, '#0c121c');
+    ctx.save();
+    ctx.translate(-slide, 0);
     ctx.fillStyle = panel;
     ctx.fillRect(0, 0, leftW, H);
-    ctx.fillRect(W - leftW, 0, leftW, H);
     ctx.strokeStyle = '#6f8eae';
     ctx.lineWidth = 2;
     for (let i = 0; i < 7; i++) {
       const y = 36 + i * 78;
       ctx.beginPath();
       ctx.moveTo(8, y);
-      ctx.lineTo(leftW - 6, y);
+      ctx.lineTo(Math.max(8, leftW - 6), y);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.save();
+    ctx.translate(slide, 0);
+    ctx.fillStyle = panel;
+    ctx.fillRect(W - leftW, 0, leftW, H);
+    ctx.strokeStyle = '#6f8eae';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 7; i++) {
+      const y = 36 + i * 78;
+      ctx.beginPath();
       ctx.moveTo(W - leftW + 6, y);
       ctx.lineTo(W - 8, y);
       ctx.stroke();
     }
-    ctx.strokeStyle = '#d7ecff';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(10, 16, W - 20, H - 32);
-    if (open < 0.35) {
-      ctx.shadowColor = '#9ad7ff';
-      ctx.shadowBlur = 18;
-      ctx.strokeStyle = '#f4fbff';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(W / 2, 24);
-      ctx.lineTo(W / 2, H - 24);
-      ctx.stroke();
-      ctx.shadowBlur = 0;
+    ctx.restore();
+    if (shown > 0.82) {
+      ctx.strokeStyle = '#d7ecff';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(10, 16, W - 20, H - 32);
+      if (open < 0.35) {
+        ctx.shadowColor = '#9ad7ff';
+        ctx.shadowBlur = 18;
+        ctx.strokeStyle = '#f4fbff';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(W / 2, 24);
+        ctx.lineTo(W / 2, H - 24);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
     }
   }
 
@@ -3099,42 +3118,123 @@
     ctx.restore();
   }
 
+  const INTRO_FOES = [
+    { x: 150, y: 72 },
+    { x: 310, y: 46 },
+    { x: 500, y: 52 },
+    { x: 660, y: 80 },
+  ];
+
+  function placeCarrier(x, y, scale, slit) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+    ctx.translate(-W / 2, -248);
+    drawCarrier(slit);
+    ctx.restore();
+  }
+
+  function drawIntroBolt(x, y, tx, ty, age, color) {
+    const u = (age % 0.48) / 0.48;
+    const px = x + (tx - x) * u;
+    const py = y + (ty - y) * u;
+    const tail = 0.16;
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.4;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.moveTo(x + (tx - x) * Math.max(0, u - tail), y + (ty - y) * Math.max(0, u - tail));
+    ctx.lineTo(px, py);
+    ctx.stroke();
+    ctx.restore();
+    return u;
+  }
+
+  function drawIntroFoes(t, arrive, flash) {
+    INTRO_FOES.forEach((foe, i) => {
+      const u = introEase(Math.min(1, (arrive - i * 0.08) / 0.7));
+      if (u <= 0) return;
+      const y = -36 + (foe.y + 36) * u;
+      const hit = flash && Math.sin(t * 16 + i) > 0.35;
+      ship(foe.x, y, PAL.red, hit ? 1 : 0, 0.78, true, false);
+    });
+  }
+
   function drawIntro() {
     const t = introT;
-    const doorOpen = introEase((t - 2.15) / 1.15);
-    const shipIn = introEase((t - 2.35) / 1.2);
-    const slit = introEase((t - 4.7) / 0.95);
-    const launch = Math.max(0, t - 5.7);
+    const flying = t < 4.4;
+    const fly = introEase(Math.min(1, t / 2));
+    const doorCover = t < 4.4 ? 0 : introEase(Math.min(1, (t - 4.4) / 0.45));
+    const doorOpen = introEase((t - 5.35) / 1.15);
+    const slit = introEase((t - 6.55) / 0.9);
+    const launch = Math.max(0, t - 7.55);
+    const pose = flying
+      ? { x: W / 2 + Math.sin(t * 1.1) * 26, y: 400 - fly * 155, s: 0.58 + fly * 0.2 }
+      : { x: W / 2, y: 268, s: 1 };
     ctx.save();
-    if (shipIn > 0) {
+    if (flying) {
       ctx.save();
-      ctx.translate(W / 2, 248);
-      ctx.scale(0.72 + shipIn * 0.28, 0.72 + shipIn * 0.28);
-      ctx.translate(-W / 2, -248);
-      drawCarrier(slit);
+      ctx.strokeStyle = 'rgba(186, 214, 255, 0.28)';
+      ctx.lineWidth = 1.4;
+      for (let i = 0; i < 16; i++) {
+        const x = (i * 53 + 20) % W;
+        const y = (i * 137 + t * 260) % (H + 40) - 20;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x - 8, y + 26);
+        ctx.stroke();
+      }
       ctx.restore();
     }
-    if (doorOpen < 0.98) drawHangarDoor(doorOpen);
-    if (launch > 0 && slit > 0.4) {
+    placeCarrier(pose.x, pose.y, pose.s, flying ? 0 : slit);
+    if (!flying) drawIntroFoes(t, 1, launch > 0.4);
+    if (t >= 2.05 && flying) {
+      const attack = t - 2.05;
+      drawIntroFoes(t, attack, false);
+      INTRO_FOES.forEach((foe, i) => {
+        const u = introEase(Math.min(1, (attack - i * 0.08) / 0.7));
+        if (u < 0.55) return;
+        const y = -36 + (foe.y + 36) * u;
+        const bolt = drawIntroBolt(foe.x, y + 16, pose.x + (i - 1.5) * 28, pose.y - 20, attack + i * 0.13, '#ff5c7e');
+        if (bolt > 0.82) {
+          ctx.save();
+          ctx.fillStyle = '#ffd0a0';
+          ctx.shadowColor = '#ff7a3c';
+          ctx.shadowBlur = 12;
+          ctx.beginPath();
+          ctx.arc(pose.x + (i - 1.5) * 28, pose.y - 10, 7 + bolt * 6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      });
+    }
+    if (doorCover > 0 && doorOpen < 0.98) drawHangarDoor(doorOpen, doorCover);
+    if (launch > 0 && slit > 0.35) {
       const craft = [
-        { kind: 'heli', friendly: false, from: [400, 230], to: [180, 150], delay: 0, scale: 1 },
-        { kind: 'heli', friendly: false, from: [400, 230], to: [620, 176], delay: 0.16, scale: 1 },
-        { kind: 'heli', friendly: true, from: [400, 306], to: [156, 410], delay: 0.08, scale: 1 },
-        { kind: 'wing', from: [352, 306], to: [230, 500], delay: 0.22, scale: 0.72 },
-        { kind: 'hero', from: [400, 306], to: [W / 2, H - 108], delay: 0.05, scale: 1 },
-        { kind: 'wing', from: [448, 306], to: [570, 500], delay: 0.28, scale: 0.72 },
+        { kind: 'hero', from: [400, 326], to: [400, 470], delay: 0, aim: 1 },
+        { kind: 'drone', from: [330, 250], to: [210, 230], delay: 0.06, aim: 0 },
+        { kind: 'drone', from: [470, 250], to: [590, 220], delay: 0.12, aim: 3 },
+        { kind: 'drone', from: [355, 326], to: [270, 360], delay: 0.16, aim: 1 },
+        { kind: 'drone', from: [445, 326], to: [540, 350], delay: 0.22, aim: 2 },
       ];
       craft.forEach(c => {
-        const u = introEase((launch - c.delay) / 1.55);
+        const u = introEase((launch - c.delay) / 1.35);
         if (u <= 0) return;
         const x = c.from[0] + (c.to[0] - c.from[0]) * u;
         const y = c.from[1] + (c.to[1] - c.from[1]) * u;
-        const s = c.scale * (0.28 + u * 0.72);
-        ctx.save();
-        ctx.globalAlpha = c.kind === 'wing' ? 0.55 + (1 - u) * 0.45 : 1;
-        if (c.kind === 'heli') drawHeli({ x, y, flash: 0 }, c.friendly);
-        else ship(x, y, PAL.player, 0, s, false, c.kind === 'hero');
-        ctx.restore();
+        if (c.kind === 'drone') {
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.scale(0.42 + u * 0.58, 0.42 + u * 0.58);
+          drawDrone({ x: 0, y: 0, flash: 0 });
+          ctx.restore();
+        } else ship(x, y, PAL.player, 0, 0.35 + u * 0.65, false, true);
+        if (u > 0.45) {
+          const foe = INTRO_FOES[c.aim];
+          drawIntroBolt(x, y - 16, foe.x, foe.y + 18, launch + c.delay, '#9eebff');
+        }
       });
     }
     introCaption(introLine(t));
