@@ -425,7 +425,7 @@
   }
 
   function describeLevel(lv) {
-    const cat = lv === LEVELS[LEVELS.length - 1] ? ` 另有一只画风鹦鹉，不受伤害，不会攻击我方。它会去啄敌方战舰，每啄一次扣 ${CAT_BITE} 血，不计入过关。` : '';
+    const cat = lv === LEVELS[LEVELS.length - 1] ? ` 另有一只黄画风鹦鹉，是贴上去的真实黄鹦鹉。它不受伤害，不会攻击我方。它会去啄敌方战舰，每啄一次扣 ${CAT_BITE} 血，不计入过关。` : '';
     return `<b>${lv.name}</b>：${roster(lv)}，同时有地面炮台 ${lv.ground}，敌方防空炮台 ${ENEMY_AA_COUNT}，敌方直升机 ${HELI_ENEMY_COUNT}，我方直升机 ${HELI_ALLY_COUNT}。${cat}`;
   }
 
@@ -1129,7 +1129,7 @@
     if (!prey || prey === player || prey.friendly || prey.kind === 'bird') return;
     burst(prey.x, prey.y, '#ffe08a', 12);
     sfxImpact();
-    showBanner('画风鹦鹉啄了一下');
+    showBanner('黄画风鹦鹉啄了一下');
     prey.hp -= CAT_BITE;
     prey.flash = 0.14;
     if (prey.hp <= 0) destroyEnemy(prey);
@@ -2348,7 +2348,7 @@
   }
 
   function drawTag(e) {
-    const text = { ground: '地面', aa: '防空', heli: '直升机', baozi: '极速飞机', smallBoss: '小Boss', bigBoss: '大Boss', bird: '画风鹦鹉' }[e.kind];
+    const text = { ground: '地面', aa: '防空', heli: '直升机', baozi: '极速飞机', smallBoss: '小Boss', bigBoss: '大Boss', bird: '黄画风鹦鹉' }[e.kind];
     if (!text) return;
     ctx.save();
     ctx.font = '12px "Noto Sans SC", sans-serif';
@@ -2828,107 +2828,33 @@
     ctx.restore();
   }
 
+  const birdBody = new Image();
+  birdBody.src = 'assets/yellow-parrot-body.png?v=1';
+  const birdWings = new Image();
+  birdWings.src = 'assets/yellow-parrot-wings.png?v=1';
+
   function drawCat(e) {
-    const flap = Math.sin(elapsed * 11 + (e.phase || 0));
     ctx.save();
     ctx.translate(e.x, e.y);
     ctx.scale(e.face || 1, 1);
-    ctx.translate(0, Math.sin(elapsed * 8 + (e.phase || 0)) * 1.8);
-    ctx.shadowColor = '#7ee8ff';
-    ctx.shadowBlur = 16;
-    ctx.fillStyle = '#3ec6ff';
-    ctx.beginPath();
-    ctx.moveTo(-6, 2);
-    ctx.quadraticCurveTo(-34, 8 + flap * 4, -44, 16);
-    ctx.quadraticCurveTo(-24, 10, -4, 8);
-    ctx.fill();
-    ctx.fillStyle = '#ffd15c';
-    ctx.beginPath();
-    ctx.moveTo(-4, 6);
-    ctx.quadraticCurveTo(-28, 18, -36, 28);
-    ctx.quadraticCurveTo(-16, 16, -2, 12);
-    ctx.fill();
-    ctx.fillStyle = '#ff5aa8';
-    ctx.beginPath();
-    ctx.moveTo(-2, 4);
-    ctx.quadraticCurveTo(-22, 2, -30, 8);
-    ctx.quadraticCurveTo(-14, 8, 0, 8);
-    ctx.fill();
-    ctx.save();
-    ctx.translate(-2, 0);
-    ctx.rotate(-0.55 + flap * 0.35);
-    ctx.fillStyle = '#1f8cff';
-    ctx.beginPath();
-    ctx.ellipse(10, -12, 15, 6, -0.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-    const body = ctx.createLinearGradient(-12, -14, 14, 16);
-    body.addColorStop(0, '#ff4d6a');
-    body.addColorStop(0.5, '#ff7a3c');
-    body.addColorStop(1, '#ffd15c');
-    ctx.fillStyle = body;
-    ctx.beginPath();
-    ctx.ellipse(0, 3, 15, 12, 0.15, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#fff4c8';
-    ctx.beginPath();
-    ctx.ellipse(5, 5, 7, 6.5, 0.35, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#ff3d62';
-    ctx.beginPath();
-    ctx.arc(11, -8, 8.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#ffe38a';
-    ctx.beginPath();
-    ctx.moveTo(7, -14);
-    ctx.lineTo(2, -26);
-    ctx.lineTo(11, -16);
-    ctx.lineTo(13, -28);
-    ctx.lineTo(17, -15);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(14, -6, 3.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#ffb15a';
-    ctx.beginPath();
-    ctx.moveTo(17, -9);
-    ctx.lineTo(28, -6);
-    ctx.lineTo(17, -4);
-    ctx.closePath();
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(17, -4);
-    ctx.lineTo(26, -2);
-    ctx.lineTo(17, -1);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#102033';
-    ctx.beginPath();
-    ctx.arc(13, -9, 1.7, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(13.6, -9.6, 0.55, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.save();
-    ctx.translate(2, -2);
-    ctx.rotate(-1.05 - flap * 0.7);
-    const wing = ctx.createLinearGradient(0, 0, 30, -8);
-    wing.addColorStop(0, '#49d6ff');
-    wing.addColorStop(1, '#7a5cff');
-    ctx.fillStyle = wing;
-    ctx.strokeStyle = '#f4fbff';
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.moveTo(0, 2);
-    ctx.quadraticCurveTo(16, -16, 32, -6);
-    ctx.quadraticCurveTo(22, 8, 6, 8);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
+    ctx.translate(0, Math.sin(elapsed * 8 + (e.phase || 0)) * 1.4);
+    if (birdBody.complete && birdBody.naturalWidth && birdWings.complete && birdWings.naturalWidth) {
+      const srcW = birdBody.naturalWidth;
+      const w = 156;
+      const h = w * birdBody.naturalHeight / srcW;
+      const sc = w / srcW;
+      const pivotX = 676;
+      const pivotY = 282;
+      const ox = -pivotX * sc;
+      const oy = -pivotY * sc;
+      ctx.drawImage(birdBody, ox, oy, w, h);
+      const flap = (Math.sin(elapsed * 11 + (e.phase || 0)) * 0.5 + 0.5) * 0.2;
+      ctx.save();
+      ctx.translate(ox + pivotX * sc, oy + pivotY * sc);
+      ctx.rotate(-flap);
+      ctx.drawImage(birdWings, -pivotX * sc, -pivotY * sc, w, h);
+      ctx.restore();
+    }
     ctx.restore();
   }
 
