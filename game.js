@@ -449,13 +449,19 @@
   let planetTaps = 0;
   let planetGlow = 0;
   let starTrail = 0;
-  const eggFound = { title: false, star: false, planet: false, footer: false };
+  const eggFound = { title: false, star: false, planet: false, footer: false, deep: false };
+  let deepRun = 0;
+  let noseForward = false;
+  let foeBase = null;
+  const DEEP_NEED = 6.5;
+  const FOE_BASE_HP = 24;
   try {
     const savedEggs = JSON.parse(localStorage.getItem('starbound-eggs') || '{}');
     eggFound.title = !!savedEggs.title;
     eggFound.star = !!savedEggs.star;
     eggFound.planet = !!savedEggs.planet;
     eggFound.footer = !!savedEggs.footer;
+    eggFound.deep = !!savedEggs.deep;
   } catch {}
   function saveEggs() {
     try { localStorage.setItem('starbound-eggs', JSON.stringify(eggFound)); } catch {}
@@ -740,6 +746,9 @@
     baseFlash = 0;
     player = { x: W / 2, y: H - 95, hp: perk.maxHp };
     firstPerson = false;
+    deepRun = 0;
+    noseForward = false;
+    foeBase = null;
     if (opening) {
       resetWaveFlags();
       introT = 0;
@@ -835,6 +844,144 @@
     $('status').textContent = '关卡通过';
     $('pause').disabled = true;
     showOverlay('LEVEL CLEAR', `${LEVELS[levelIndex].name} 通过`, `下一关 ${nextBlurb(next)}`, '进入下一关', '按 Enter 继续');
+  }
+
+  function pushingForward() {
+    const up = keys.has('w') || keys.has('arrowup') || noseForward;
+    const down = keys.has('s') || keys.has('arrowdown');
+    return up && !down;
+  }
+
+  function deepSlipping() {
+    return firstPerson && !foeBase && deepRun > 0.2 && pushingForward();
+  }
+
+  function tickDeepRun(dt) {
+    if (!dragging) noseForward = false;
+    if (mode !== 'playing' || !firstPerson || !player) return;
+    const down = keys.has('s') || keys.has('arrowdown');
+    if (down) deepRun = Math.max(0, deepRun - dt * 2.6);
+    else if (pushingForward()) deepRun += dt;
+    else deepRun = Math.max(0, deepRun - dt * 0.55);
+    if (!foeBase && deepRun >= DEEP_NEED) revealFoeBase();
+    if (foeBase && foeBase.flash > 0) foeBase.flash = Math.max(0, foeBase.flash - dt);
+  }
+
+  function foeSight() {
+    if (!firstPerson) return null;
+    if (foeBase && foeBase.hp > 0) return foeBase;
+    const start = DEEP_NEED - 2.6;
+    if (deepRun <= start) return null;
+    const t = Math.min(1, (deepRun - start) / (DEEP_NEED - start));
+    return {
+      x: W / 2,
+      y: -520 + t * 430,
+      hp: FOE_BASE_HP,
+      max: FOE_BASE_HP,
+      flash: 0,
+      ghost: 1 - t * 0.82,
+    };
+  }
+
+  function revealFoeBase() {
+    foeBase = { x: W / 2, y: -90, hp: FOE_BASE_HP, max: FOE_BASE_HP, flash: 0, dead: false };
+    showBanner('前方出现了敌方基地');
+  }
+
+  function hurtFoeBase(amount) {
+    if (!foeBase || foeBase.hp <= 0 || mode !== 'playing') return;
+    foeBase.hp -= amount;
+    foeBase.flash = 0.12;
+    burst(foeBase.x, foeBase.y, '#ff8aa0', 8);
+    if (foeBase.hp <= 0) crushFoeBase();
+  }
+
+  function crushFoeBase() {
+    foeBase.hp = 0;
+    foeBase.dead = true;
+    boom(foeBase.x, foeBase.y, '#ff3355', 2.2);
+    burst(foeBase.x, foeBase.y, '#ffd0a8', 28);
+    sfxExplosion(true);
+    mode = 'victory';
+    saveBest();
+    keys.clear();
+    gesture = null;
+    shipSelected = false;
+    moveTarget = null;
+    dragging = false;
+    $('status').textContent = '彻底获胜';
+    $('pause').disabled = true;
+    addCoins(50);
+    grantEgg('deep', 36, '敌方基地被打穿了');
+    syncHUD();
+    showOverlay('ENEMY BASE', '彻底获胜。', `你一直往前飞，打穿了敌方基地。得分 ${score} · 击毁 ${kills} · 星币 ${wallet.coins}`, '再飞一次', '按 Enter 重新开始');
+    burst(W / 2, H / 2, '#ffd15c', 36);
+    tone(680, 0.4);
+  }
+
+  let foePaint = null;
+  function paintFoeBase() {
+    const b = foePaint;
+    if (!b) return;
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    if (b.ghost) ctx.globalAlpha = Math.max(0.22, 1 - b.ghost);
+    else if (b.flash > 0) ctx.globalAlpha = 0.62;
+    ctx.shadowColor = '#ff3355';
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = '#4a1020';
+    ctx.strokeStyle = '#ff6b86';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-78, 22);
+    ctx.lineTo(-54, -16);
+    ctx.lineTo(-22, -6);
+    ctx.lineTo(0, -40);
+    ctx.lineTo(22, -6);
+    ctx.lineTo(54, -16);
+    ctx.lineTo(78, 22);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ffd2dc';
+    ctx.fillRect(-10, -8, 20, 16);
+    ctx.fillStyle = '#ff3148';
+    ctx.fillRect(-6, -4, 12, 8);
+    ctx.fillStyle = '#ffe4ea';
+    ctx.font = '700 16px "Noto Sans SC", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (!b.ghost || b.ghost < 0.45) ctx.fillText('敌方基地', 0, -58);
+    if (!b.ghost) {
+      const bar = 120;
+      ctx.fillStyle = '#2a1016';
+      ctx.fillRect(-bar / 2, 28, bar, 14);
+      ctx.fillStyle = '#ff4d62';
+      ctx.fillRect(-bar / 2, 28, bar * Math.max(0, b.hp / b.max), 14);
+      ctx.fillStyle = '#fff4f6';
+      ctx.font = '700 12px "Noto Sans SC", sans-serif';
+      ctx.fillText(`${Math.max(0, Math.ceil(b.hp))}/${b.max}`, 0, 35);
+    }
+    ctx.restore();
+  }
+
+  function drawDeepFlight() {
+    if (!firstPerson || deepRun < 0.15 || !pushingForward()) return;
+    ctx.save();
+    const rush = Math.min(1, deepRun / DEEP_NEED);
+    for (let i = 0; i < 18; i++) {
+      const x = ((i * 47 + elapsed * (80 + rush * 260)) % (W + 40)) - 20;
+      const len = 16 + rush * 54 + (i % 4) * 8;
+      const y = (i * 73 + elapsed * (140 + rush * 420)) % (H - 80);
+      ctx.strokeStyle = `rgba(186, 226, 255, ${0.12 + rush * 0.38})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + (i % 2 ? 2 : -2), y + len);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   function victory() {
@@ -1695,6 +1842,7 @@
     }
     player.x = Math.max(24, Math.min(W - 24, player.x));
     player.y = Math.max(40, Math.min(H - 38, player.y));
+    tickDeepRun(dt);
     sweepScythe(dt);
 
     if (lightning > 0) lightning = Math.max(0, lightning - dt);
@@ -1793,7 +1941,10 @@
           b.dead = true;
           continue;
         }
-        if (!b.target || b.target.dead || b.target.hp <= 0) b.target = nearestEnemy(b);
+        if (!b.target || b.target.dead || b.target.hp <= 0) {
+          b.target = nearestEnemy(b);
+          if ((!b.target || b.target.dead || b.target.hp <= 0) && !b.friendly && firstPerson && foeBase && foeBase.hp > 0) b.target = foeBase;
+        }
         if (b.target) {
           const angle = Math.atan2(b.target.y - b.y, b.target.x - b.x);
           const speed = b.aurora ? 460 : 270;
@@ -1850,7 +2001,7 @@
         const ry = b.bomb ? 28 : 22;
         if (Math.abs(b.x - player.x) < rx && Math.abs(b.y - player.y) < ry) {
           b.dead = true;
-          damage(b.dmg || 1);
+          if (!deepSlipping()) damage(b.dmg || 1);
           if (mode !== 'playing') break;
           continue;
         }
@@ -1895,6 +2046,22 @@
             break;
           }
         }
+        if (!b.dead && !b.friendly && firstPerson && foeBase && foeBase.hp > 0) {
+          const hx = b.bomb ? 72 : 58;
+          const hy = b.bomb ? 42 : 28;
+          if (Math.abs(b.x - foeBase.x) < hx && Math.abs(b.y - foeBase.y) < hy) {
+            b.dead = true;
+            if (b.bomb) {
+              boom(b.x, b.y, '#ffb020', 1.5);
+              sfxExplosion(false);
+            } else {
+              burst(b.x, b.y, '#ff8aa0', 8);
+              muzzleFlash(b.x, b.y, '#ff8aa0');
+              sfxImpact();
+            }
+            hurtFoeBase(b.dmg || 1);
+          }
+        }
       }
     }
 
@@ -1913,7 +2080,8 @@
       if (b.dead) return false;
       if (b.homing) return true;
       if (b.mortar) return b.y < H + 80 && b.x > -80 && b.x < W + 80;
-      return b.y > -50 && b.y < H + 50 && b.x > -50 && b.x < W + 50;
+      const far = firstPerson && foeBase && foeBase.hp > 0 && !b.enemy && !b.friendly;
+      return b.y > (far ? -900 : -50) && b.y < H + 50 && b.x > -50 && b.x < W + 50;
     });
     $('time').textContent = $('arena-time').textContent = formatTime(elapsed);
     if (mode === 'playing' && quotaMet()) levelClear();
@@ -2886,6 +3054,7 @@
   }
 
   function drawFirstPerson() {
+    drawDeepFlight();
     const marks = [];
     for (const e of enemies) {
       if (!e.dead) marks.push({ depth: player.y - e.y, draw: () => withProjected(e, () => paintEnemyWorld(e)) });
@@ -2895,6 +3064,16 @@
     }
     for (const it of items) marks.push({ depth: player.y - it.y, draw: () => withProjected(it, () => drawItem(it)) });
     for (const b of lasers) marks.push({ depth: player.y - b.y, draw: () => withProjected(b, () => drawLaser(b)) });
+    const sight = foeSight();
+    if (sight) {
+      marks.push({
+        depth: player.y - sight.y,
+        draw: () => {
+          foePaint = sight;
+          withProjected(sight, paintFoeBase);
+        },
+      });
+    }
     marks.sort((a, b) => b.depth - a.depth);
     for (const m of marks) m.draw();
 
@@ -3937,6 +4116,7 @@
     player.x = Math.max(24, Math.min(W - 24, p.x));
     player.y = Math.max(40, Math.min(H - 38, p.y));
     moveTarget = { x: player.x, y: player.y };
+    noseForward = p.y < 78;
   }
   function overArena(e) {
     const r = arena.getBoundingClientRect();
